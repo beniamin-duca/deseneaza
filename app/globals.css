@@ -85,18 +85,30 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Kids app: never select UI text accidentally on long-press, never */
+    /* show the iOS callout/copy menu, never highlight a tap target. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
   }
-  
+
   /* Touch optimization for kids */
   button, [role="button"] {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  
-  /* Prevent text selection on interactive elements */
-  .no-select {
-    user-select: none;
-    -webkit-user-select: none;
+
+  /* Form inputs need selection so people can edit them. */
+  input, textarea, [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* Opt-in utility for places that should allow copy/select. */
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
   }
 }
 
