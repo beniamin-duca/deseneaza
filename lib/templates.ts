@@ -42,7 +42,7 @@ export const DRAWING_COLORS = [
 // Brush sizes with kid-friendly names
 export const BRUSH_SIZES = [
   { id: 'small', value: 8, name: 'Mic', icon: '●' },
-  { id: 'medium', value: 16, value: 16, name: 'Mediu', icon: '●' },
+  { id: 'medium', value: 16, name: 'Mediu', icon: '●' },
   { id: 'large', value: 28, name: 'Mare', icon: '●' },
   { id: 'xlarge', value: 44, name: 'Foarte mare', icon: '●' },
 ] as const
