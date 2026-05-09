@@ -26,7 +26,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { type Stamp } from '@/lib/templates'
-import { getStoryById, type Story } from '@/lib/stories'
+import { type Story } from '@/lib/stories'
+import { useStory } from '@/lib/use-stories'
 import {
   getStatus,
   loadCanvas,
@@ -40,7 +41,7 @@ function StoryDetailContent() {
   const router = useRouter()
   const isMobile = useIsMobile()
 
-  const story = getStoryById(params.storyId)
+  const story = useStory(params.storyId)
 
   const canvasRef = useRef<KidCanvasRef>(null)
   const [tool, setTool] = useState<Tool>('brush')

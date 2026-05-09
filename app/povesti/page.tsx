@@ -5,7 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { toast, Toaster } from 'sonner'
 import { TopHeader } from '@/components/top-header'
 import { StoryCheckpoint } from '@/components/story-checkpoint'
-import { getAllStories, type Story } from '@/lib/stories'
+import { type Story } from '@/lib/stories'
+import { useAllStories } from '@/lib/use-stories'
 import {
   loadAllStatuses,
   loadCanvas,
@@ -163,7 +164,7 @@ function TimelineColumn({
 }
 
 function PovestiContent() {
-  const stories = useMemo(() => getAllStories(), [])
+  const stories = useAllStories()
   const router = useRouter()
   const searchParams = useSearchParams()
   const completedId = searchParams.get('completed')
