@@ -34,19 +34,20 @@ export function StoryCheckpoint({
     return () => URL.revokeObjectURL(url)
   }, [canvasBlob])
 
-  const sideOffset = story.order % 2 === 1 ? 'self-start ml-[8%]' : 'self-end mr-[8%]'
-
   if (status === 'locked') {
     return (
-      <div className={cn('flex flex-col items-center', sideOffset)}>
+      <div className="flex flex-col items-center">
         <button
           onClick={onLockedTap}
           aria-label={`${story.titleRo} (blocata)`}
-          className="relative w-20 h-20 rounded-full bg-muted/40 flex items-center justify-center opacity-50 hover:opacity-60 transition-opacity"
+          className="relative w-20 h-20 rounded-full bg-muted/30 flex items-center justify-center opacity-55 hover:opacity-70 transition-opacity"
+          style={{
+            boxShadow: 'inset 0 0 20px rgba(180, 150, 90, 0.18)',
+          }}
         >
           <Lock className="w-7 h-7 text-muted-foreground" />
         </button>
-        <p className="text-sm text-muted-foreground/70 mt-2 text-center max-w-[140px] truncate">
+        <p className="text-sm text-muted-foreground/70 mt-2 text-center max-w-[160px] truncate">
           {story.titleRo}
         </p>
       </div>
@@ -54,18 +55,26 @@ export function StoryCheckpoint({
   }
 
   return (
-    <div className={cn('flex flex-col items-center', sideOffset)}>
+    <div className="flex flex-col items-center">
+      {isCurrent && (
+        <span
+          aria-hidden
+          className="font-display text-xs font-bold mb-1 px-2 py-0.5 rounded-full text-white shadow-md"
+          style={{ backgroundColor: story.accentColor }}
+        >
+          Aici!
+        </span>
+      )}
       <Link
         href={`/povesti/${story.id}`}
         aria-label={story.titleRo}
         className={cn(
-          'relative w-20 h-20 rounded-full flex items-center justify-center overflow-hidden border-4 bg-white transition-transform hover:scale-105 active:scale-95',
-          status === 'available' && 'animate-[pulse_2.4s_ease-in-out_infinite]',
-          isCurrent && 'ring-4 ring-offset-2 ring-offset-background'
+          'relative w-20 h-20 rounded-full flex items-center justify-center overflow-hidden border-4 bg-white transition-transform hover:scale-110 active:scale-95',
+          status === 'available' && 'animate-[pulse_2.4s_ease-in-out_infinite]'
         )}
         style={{
           borderColor: story.accentColor,
-          boxShadow: `0 0 24px ${story.accentColor}55`,
+          boxShadow: `0 0 28px ${story.accentColor}66, 0 4px 12px rgba(0,0,0,0.08)`,
         }}
       >
         {thumbUrl ? (
@@ -85,17 +94,17 @@ export function StoryCheckpoint({
         )}
         {status === 'done' && (
           <span
-            className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-yellow flex items-center justify-center"
+            className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-yellow flex items-center justify-center shadow-md"
             aria-hidden
           >
             <Star className="w-4 h-4 fill-foreground text-foreground" />
           </span>
         )}
       </Link>
-      <p className="text-sm font-medium text-foreground mt-2 text-center max-w-[140px] truncate">
+      <p className="text-sm font-medium text-foreground mt-2 text-center max-w-[160px] truncate">
         {story.titleRo}
       </p>
-      <p className="text-xs text-muted-foreground text-center max-w-[140px] truncate">
+      <p className="text-xs text-muted-foreground text-center max-w-[160px] truncate">
         {story.scriptureRef}
       </p>
     </div>
