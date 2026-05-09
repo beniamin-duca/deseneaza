@@ -2,33 +2,29 @@
 
 import { useRef, useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Undo2, Trash2, Stamp as StampIcon, Save } from 'lucide-react'
 import { FloatingTopBar } from '@/components/floating-top-bar'
 import { FloatingToolbar, type Tool } from '@/components/floating-toolbar'
 import { TemplateSidebar } from '@/components/template-sidebar'
 import { StampSidebar } from '@/components/stamp-sidebar'
 import { KidCanvas, type KidCanvasRef } from '@/components/kid-canvas'
 import { SaveShareSheet } from '@/components/save-share-sheet'
-import {
-  STAMPS,
-  getRandomTemplate,
-  type Template,
-  type Stamp,
-} from '@/lib/templates'
-import { cn } from '@/lib/utils'
+import { type Template, type Stamp } from '@/lib/templates'
 
-type DrawMode = 'blank' | 'colorat' | 'stampile' | 'surpriza'
+type DrawMode = 'blank' | 'colorat'
 
 const MODE_TITLES: Record<DrawMode, string> = {
   blank: 'Deseneaza',
   colorat: 'Coloreaza',
-  stampile: 'Stampile',
-  surpriza: 'Surpriza',
+}
+
+function isDrawMode(value: string | null): value is DrawMode {
+  return value === 'blank' || value === 'colorat'
 }
 
 function DrawingPageContent() {
   const searchParams = useSearchParams()
-  const mode = (searchParams.get('mode') as DrawMode) || 'blank'
+  const modeParam = searchParams.get('mode')
+  const mode: DrawMode = isDrawMode(modeParam) ? modeParam : 'blank'
 
   const canvasRef = useRef<KidCanvasRef>(null)
   const [tool, setTool] = useState<Tool>('brush')
@@ -43,12 +39,8 @@ function DrawingPageContent() {
   const [showStampSidebar, setShowStampSidebar] = useState(false)
 
   useEffect(() => {
-    if (mode === 'surpriza') {
-      setSelectedTemplate(getRandomTemplate())
-    } else if (mode === 'colorat') {
+    if (mode === 'colorat') {
       setShowTemplateSidebar(true)
-    } else if (mode === 'stampile') {
-      setSelectedStamp(STAMPS[0])
     }
   }, [mode])
 
@@ -71,9 +63,8 @@ function DrawingPageContent() {
     }
   }
 
-  const templateSrc =
-    mode === 'colorat' || mode === 'surpriza' ? selectedTemplate?.src ?? null : null
-  const stampSrc = mode === 'stampile' ? selectedStamp?.src ?? null : null
+  const templateSrc = mode === 'colorat' ? selectedTemplate?.src ?? null : null
+  const stampSrc = tool === 'stamp' ? selectedStamp?.src ?? null : null
 
   const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template)
@@ -86,9 +77,8 @@ function DrawingPageContent() {
     if (stamp) setShowStampSidebar(false)
   }
 
-  const showTemplatesButton = mode === 'colorat' || mode === 'surpriza'
+  const showTemplatesButton = mode === 'colorat'
   const anySidebarOpen = showTemplateSidebar || showStampSidebar
-  const canvasDisabled = mode === 'stampile' && !selectedStamp
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden relative">
@@ -102,38 +92,26 @@ function DrawingPageContent() {
         templateSrc={templateSrc}
         stampSrc={stampSrc}
         onStampPlaced={() => {}}
-        disabled={canvasDisabled}
       />
 
-      {mode !== 'stampile' ? (
-        <FloatingToolbar
-          activeTool={tool}
-          onToolChange={setTool}
-          activeColor={color}
-          onColorChange={setColor}
-          brushSize={brushSize}
-          onBrushSizeChange={setBrushSize}
-          onUndo={handleUndo}
-          onClear={handleClear}
-          onSave={handleSave}
-          onShowTemplates={
-            showTemplatesButton ? () => setShowTemplateSidebar(true) : undefined
-          }
-          showTemplateButton={showTemplatesButton}
-          canUndo={canUndo}
-          hidden={anySidebarOpen}
-        />
-      ) : (
-        <StampsFloatingBar
-          selectedStamp={selectedStamp}
-          onShowStamps={() => setShowStampSidebar(true)}
-          onUndo={handleUndo}
-          onClear={handleClear}
-          onSave={handleSave}
-          canUndo={canUndo}
-          hidden={anySidebarOpen}
-        />
-      )}
+      <FloatingToolbar
+        activeTool={tool}
+        onToolChange={setTool}
+        activeColor={color}
+        onColorChange={setColor}
+        brushSize={brushSize}
+        onBrushSizeChange={setBrushSize}
+        onUndo={handleUndo}
+        onClear={handleClear}
+        onSave={handleSave}
+        onShowTemplates={
+          showTemplatesButton ? () => setShowTemplateSidebar(true) : undefined
+        }
+        onShowStamps={() => setShowStampSidebar(true)}
+        showTemplateButton={showTemplatesButton}
+        canUndo={canUndo}
+        hidden={anySidebarOpen}
+      />
 
       <TemplateSidebar
         isOpen={showTemplateSidebar}
@@ -155,83 +133,6 @@ function DrawingPageContent() {
         imageDataUrl={imageDataUrl}
         onContinue={() => setShowSaveSheet(false)}
       />
-    </div>
-  )
-}
-
-interface StampsFloatingBarProps {
-  selectedStamp: Stamp | null
-  onShowStamps: () => void
-  onUndo: () => void
-  onClear: () => void
-  onSave: () => void
-  canUndo: boolean
-  hidden?: boolean
-}
-
-function StampsFloatingBar({
-  selectedStamp,
-  onShowStamps,
-  onUndo,
-  onClear,
-  onSave,
-  canUndo,
-  hidden,
-}: StampsFloatingBarProps) {
-  return (
-    <div
-      className={cn(
-        'fixed bottom-6 left-1/2 -translate-x-1/2 z-30 transition-opacity duration-200',
-        hidden ? 'opacity-0 pointer-events-none' : 'opacity-100'
-      )}
-    >
-      <div className="floating-toolbar px-3 py-2 pop-in">
-        <div className="floating-toolbar-inner flex items-center gap-2">
-          <button
-            onClick={onShowStamps}
-            className="tool-btn bg-yellow/30 hover:bg-yellow/50 text-foreground"
-            aria-label="Alege stampila"
-            title={selectedStamp ? `Stampila: ${selectedStamp.name}` : 'Alege stampila'}
-          >
-            <StampIcon className="w-6 h-6" />
-          </button>
-
-          <div className="w-px h-8 bg-border mx-1" />
-
-          <button
-            onClick={onUndo}
-            disabled={!canUndo}
-            className={cn(
-              'tool-btn',
-              canUndo
-                ? 'bg-muted/50 hover:bg-muted'
-                : 'bg-muted/30 text-muted-foreground/50 cursor-not-allowed'
-            )}
-            aria-label="Inapoi"
-            title="Inapoi"
-          >
-            <Undo2 className="w-6 h-6" />
-          </button>
-
-          <button
-            onClick={onClear}
-            className="tool-btn bg-coral/10 hover:bg-coral/20 text-coral-dark"
-            aria-label="Sterge tot"
-            title="Sterge tot"
-          >
-            <Trash2 className="w-6 h-6" />
-          </button>
-
-          <button
-            onClick={onSave}
-            className="tool-btn bg-mint text-white hover:bg-mint-dark"
-            aria-label="Salveaza"
-            title="Salveaza"
-          >
-            <Save className="w-6 h-6" />
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Paintbrush, Palette, Stamp, Sparkles } from 'lucide-react'
+import { Paintbrush, Palette } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ModeCardProps {
@@ -96,25 +96,6 @@ export default function HomePage() {
             description="Alege un desen"
             bgClass="bg-gradient-to-br from-mint to-mint-dark"
             delay={80}
-          />
-
-          <ModeCard
-            href="/desen?mode=stampile"
-            icon={<Stamp className="size-8 text-foreground" />}
-            title="Stampile"
-            description="Pune stampile"
-            bgClass="bg-gradient-to-br from-yellow to-yellow-dark"
-            textClass="text-foreground"
-            delay={160}
-          />
-
-          <ModeCard
-            href="/desen?mode=surpriza"
-            icon={<Sparkles className="size-8 text-white" />}
-            title="Surpriza"
-            description="Desen aleator"
-            bgClass="bg-gradient-to-br from-[#AA96DA] to-[#8E7BC4]"
-            delay={240}
           />
         </div>
       </section>

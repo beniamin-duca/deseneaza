@@ -10,11 +10,12 @@ import {
   Trash2,
   Save,
   Images,
+  Stamp,
 } from 'lucide-react'
 import { ColorPopover } from './color-popover'
 import { SizePopover } from './size-popover'
 
-export type Tool = 'brush' | 'eraser' | 'fill'
+export type Tool = 'brush' | 'eraser' | 'fill' | 'stamp'
 
 interface FloatingToolbarProps {
   activeTool: Tool
@@ -27,6 +28,7 @@ interface FloatingToolbarProps {
   onClear: () => void
   onSave: () => void
   onShowTemplates?: () => void
+  onShowStamps?: () => void
   canUndo: boolean
   showTemplateButton?: boolean
   hidden?: boolean
@@ -58,6 +60,7 @@ function BottomDock({
   onClear,
   onSave,
   onShowTemplates,
+  onShowStamps,
   canUndo,
   showTemplateButton,
   hidden,
@@ -99,6 +102,25 @@ function BottomDock({
               <t.icon className="w-6 h-6" />
             </button>
           ))}
+
+          {onShowStamps && (
+            <button
+              onClick={() => {
+                onToolChange('stamp')
+                onShowStamps()
+              }}
+              className={cn(
+                'tool-btn',
+                activeTool === 'stamp'
+                  ? 'active'
+                  : 'bg-yellow/30 hover:bg-yellow/50 text-foreground'
+              )}
+              aria-label="Stampile"
+              title="Stampile"
+            >
+              <Stamp className="w-6 h-6" />
+            </button>
+          )}
 
           <div className="w-px h-8 bg-border" />
 
@@ -159,6 +181,7 @@ function SideRail({
   onClear,
   onSave,
   onShowTemplates,
+  onShowStamps,
   canUndo,
   showTemplateButton,
 }: FloatingToolbarProps) {
@@ -193,6 +216,25 @@ function SideRail({
             <t.icon className="w-6 h-6" />
           </button>
         ))}
+
+        {onShowStamps && (
+          <button
+            onClick={() => {
+              onToolChange('stamp')
+              onShowStamps()
+            }}
+            className={cn(
+              'tool-btn',
+              activeTool === 'stamp'
+                ? 'active'
+                : 'bg-yellow/30 hover:bg-yellow/50 text-foreground'
+            )}
+            aria-label="Stampile"
+            title="Stampile"
+          >
+            <Stamp className="w-6 h-6" />
+          </button>
+        )}
 
         <div className="h-px w-8 bg-border my-1" />
 
