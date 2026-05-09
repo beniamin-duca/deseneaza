@@ -63,8 +63,27 @@ function DrawingPageContent() {
     }
   }
 
+  // Picking a color while in a tool that doesn't use color (stamp/eraser)
+  // should switch to brush — the kid clearly wants to draw with that color.
+  const handleColorChange = (newColor: string) => {
+    setColor(newColor)
+    if (tool === 'stamp' || tool === 'eraser') {
+      setTool('brush')
+    }
+  }
+
+  // Picking a brush size while in a tool that doesn't use size (stamp/fill)
+  // should switch to brush. Eraser uses size, so keep eraser when active.
+  const handleBrushSizeChange = (size: number) => {
+    setBrushSize(size)
+    if (tool === 'stamp' || tool === 'fill') {
+      setTool('brush')
+    }
+  }
+
   const templateSrc = mode === 'colorat' ? selectedTemplate?.src ?? null : null
   const stampSrc = tool === 'stamp' ? selectedStamp?.src ?? null : null
+  const canvasDisabled = tool === 'stamp' && !selectedStamp
 
   const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template)
@@ -92,15 +111,16 @@ function DrawingPageContent() {
         templateSrc={templateSrc}
         stampSrc={stampSrc}
         onStampPlaced={() => {}}
+        disabled={canvasDisabled}
       />
 
       <FloatingToolbar
         activeTool={tool}
         onToolChange={setTool}
         activeColor={color}
-        onColorChange={setColor}
+        onColorChange={handleColorChange}
         brushSize={brushSize}
-        onBrushSizeChange={setBrushSize}
+        onBrushSizeChange={handleBrushSizeChange}
         onUndo={handleUndo}
         onClear={handleClear}
         onSave={handleSave}
@@ -122,7 +142,14 @@ function DrawingPageContent() {
 
       <StampSidebar
         isOpen={showStampSidebar}
-        onClose={() => setShowStampSidebar(false)}
+        onClose={() => {
+          setShowStampSidebar(false)
+          // If they bailed out without picking a stamp, don't leave them
+          // stuck in 'stamp' mode with nothing to place — go back to brush.
+          if (tool === 'stamp' && !selectedStamp) {
+            setTool('brush')
+          }
+        }}
         onSelectStamp={handleSelectStamp}
         selectedStampId={selectedStamp?.id}
       />
