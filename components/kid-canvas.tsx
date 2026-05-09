@@ -35,6 +35,35 @@ export interface KidCanvasRef {
 const MAX_UNDO_STACK = 20
 const TEMPLATE_BARRIER_THRESHOLD = 80
 
+// Inline SVG cursors per tool. Hotspot is the natural "active tip"
+// of each tool. Brush + fill use the active color so the kid sees
+// what they're about to paint with.
+function buildToolCursor(tool: Tool, color: string, disabled: boolean): string {
+  if (disabled) return 'not-allowed'
+
+  const cursor = (svg: string, hotX: number, hotY: number) =>
+    `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}") ${hotX} ${hotY}, auto`
+
+  switch (tool) {
+    case 'brush': {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M22 4 L28 10 L13 25 L7 25 L7 19 Z" fill="white" stroke="black" stroke-width="2" stroke-linejoin="round"/><circle cx="5" cy="27" r="4" fill="${color}" stroke="black" stroke-width="2"/></svg>`
+      return cursor(svg, 5, 27)
+    }
+    case 'eraser': {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect x="4" y="12" width="22" height="12" rx="3" fill="white" stroke="black" stroke-width="2"/><line x1="4" y1="20" x2="26" y2="20" stroke="black" stroke-width="1.5"/></svg>`
+      return cursor(svg, 15, 20)
+    }
+    case 'fill': {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M8 4 L20 16 L8 28 L4 24 Z" fill="white" stroke="black" stroke-width="2" stroke-linejoin="round"/><path d="M20 16 L24 20 L24 26 L18 26 Z" fill="white" stroke="black" stroke-width="2" stroke-linejoin="round"/><circle cx="27" cy="26" r="3" fill="${color}" stroke="black" stroke-width="1.5"/></svg>`
+      return cursor(svg, 4, 26)
+    }
+    case 'stamp': {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect x="4" y="22" width="24" height="6" rx="1" fill="white" stroke="black" stroke-width="2"/><path d="M10 22 L10 14 L8 4 L24 4 L22 14 L22 22 Z" fill="white" stroke="black" stroke-width="2" stroke-linejoin="round"/></svg>`
+      return cursor(svg, 16, 26)
+    }
+  }
+}
+
 export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
   function KidCanvas(
     {
@@ -432,6 +461,8 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       },
     }))
 
+    const cursorStyle = buildToolCursor(tool, color, disabled)
+
     return (
       <div
         ref={containerRef}
@@ -444,8 +475,8 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          className="w-full h-full cursor-crosshair block"
-          style={{ touchAction: 'none' }}
+          className="w-full h-full block"
+          style={{ touchAction: 'none', cursor: cursorStyle }}
         />
         {templateSrc && (
           <img
