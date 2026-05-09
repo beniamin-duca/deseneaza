@@ -238,7 +238,7 @@ function SideRail({
 
         <div className="h-px w-8 bg-border my-1" />
 
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-2">
           {DRAWING_COLORS.map((color) => (
             <button
               key={color.id}
@@ -247,7 +247,7 @@ function SideRail({
                 'color-swatch',
                 activeColor === color.value && 'active'
               )}
-              style={{ backgroundColor: color.value, width: 32, height: 32 }}
+              style={{ backgroundColor: color.value, width: 40, height: 40 }}
               aria-label={color.name}
               title={color.name}
             />
