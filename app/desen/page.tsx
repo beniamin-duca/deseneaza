@@ -9,6 +9,16 @@ import { StampSidebar } from '@/components/stamp-sidebar'
 import { KidCanvas, type KidCanvasRef } from '@/components/kid-canvas'
 import { SaveShareSheet } from '@/components/save-share-sheet'
 import { type Template, type Stamp } from '@/lib/templates'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 type DrawMode = 'blank' | 'colorat'
 
@@ -37,6 +47,7 @@ function DrawingPageContent() {
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
   const [showTemplateSidebar, setShowTemplateSidebar] = useState(false)
   const [showStampSidebar, setShowStampSidebar] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   useEffect(() => {
     if (mode === 'colorat') {
@@ -54,7 +65,11 @@ function DrawingPageContent() {
   }, [])
 
   const handleUndo = () => canvasRef.current?.undo()
-  const handleClear = () => canvasRef.current?.clear()
+  const handleClear = () => setShowClearConfirm(true)
+  const handleConfirmClear = () => {
+    canvasRef.current?.clear()
+    setShowClearConfirm(false)
+  }
   const handleSave = () => {
     const dataUrl = canvasRef.current?.getImageDataUrl()
     if (dataUrl) {
@@ -160,6 +175,30 @@ function DrawingPageContent() {
         imageDataUrl={imageDataUrl}
         onContinue={() => setShowSaveSheet(false)}
       />
+
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-2xl">
+              Stergi tot desenul?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              Vei pierde ce ai desenat pana acum. Esti sigur?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-12 rounded-full font-display text-base">
+              Nu, pastreaza
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmClear}
+              className="h-12 rounded-full font-display text-base bg-coral hover:bg-coral-dark"
+            >
+              Da, sterge
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
