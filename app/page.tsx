@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Paintbrush, Palette } from 'lucide-react'
+import { Paintbrush, Palette, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ModeCardProps {
@@ -96,6 +96,16 @@ export default function HomePage() {
             description="Alege un desen"
             bgClass="bg-gradient-to-br from-mint to-mint-dark"
             delay={80}
+          />
+
+          <ModeCard
+            href="/povesti"
+            icon={<BookOpen className="size-8 text-foreground" />}
+            title="Povesti din Biblie"
+            description="Coloreaza si invata"
+            bgClass="bg-gradient-to-br from-yellow to-yellow-dark min-[420px]:col-span-2"
+            textClass="text-foreground"
+            delay={160}
           />
         </div>
       </section>
