@@ -1,0 +1,269 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+:root {
+  /* Riza brand colors */
+  --coral: #FF6B6B;
+  --coral-light: #FF8A8A;
+  --coral-dark: #E55A5A;
+  --mint: #4ECDC4;
+  --mint-light: #6ED9D2;
+  --mint-dark: #3DBDB5;
+  --yellow: #FFE66D;
+  --yellow-light: #FFED8A;
+  --yellow-dark: #E6CF5E;
+  --cream: #FFF9E6;
+  --cream-dark: #F5EED6;
+  
+  /* Theme tokens */
+  --background: #FFF9E6;
+  --foreground: #2D3436;
+  --card: #FFFFFF;
+  --card-foreground: #2D3436;
+  --popover: #FFFFFF;
+  --popover-foreground: #2D3436;
+  --primary: #FF6B6B;
+  --primary-foreground: #FFFFFF;
+  --secondary: #4ECDC4;
+  --secondary-foreground: #FFFFFF;
+  --muted: #F5EED6;
+  --muted-foreground: #636E72;
+  --accent: #FFE66D;
+  --accent-foreground: #2D3436;
+  --destructive: #E55A5A;
+  --destructive-foreground: #FFFFFF;
+  --border: #E0D9C6;
+  --input: #FFFFFF;
+  --ring: #FF6B6B;
+  --radius: 1rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-quicksand), 'Quicksand', system-ui, sans-serif;
+  --font-display: var(--font-fredoka), 'Fredoka', system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Brand colors */
+  --color-coral: var(--coral);
+  --color-coral-light: var(--coral-light);
+  --color-coral-dark: var(--coral-dark);
+  --color-mint: var(--mint);
+  --color-mint-light: var(--mint-light);
+  --color-mint-dark: var(--mint-dark);
+  --color-yellow: var(--yellow);
+  --color-yellow-light: var(--yellow-light);
+  --color-yellow-dark: var(--yellow-dark);
+  --color-cream: var(--cream);
+  --color-cream-dark: var(--cream-dark);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  
+  /* Touch optimization for kids */
+  button, [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Prevent text selection on interactive elements */
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* Font utility classes */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Canvas touch handling */
+.touch-canvas {
+  touch-action: none;
+  -webkit-touch-callout: none;
+}
+
+/* Smooth transitions */
+.transition-bounce {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Active state for buttons */
+.btn-bounce:active {
+  transform: scale(0.95);
+}
+
+/* Canva-style floating toolbar */
+.floating-toolbar {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.02);
+  border-radius: 20px;
+}
+
+.floating-toolbar-inner {
+  background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 100%);
+  border-radius: 20px;
+}
+
+/* Glass morphism effect for panels */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Tool button styles */
+.tool-btn {
+  @apply relative flex items-center justify-center rounded-2xl transition-all duration-200;
+  width: 52px;
+  height: 52px;
+}
+
+.tool-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.tool-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.tool-btn.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 16px rgba(255, 107, 107, 0.4);
+}
+
+/* Color swatch styles */
+.color-swatch {
+  @apply relative rounded-full cursor-pointer transition-all duration-200;
+  width: 40px;
+  height: 40px;
+  border: 3px solid transparent;
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.color-swatch.active {
+  border-color: var(--foreground);
+  transform: scale(1.1);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8);
+}
+
+/* Playful card hover effect */
+.playful-card {
+  @apply transition-all duration-300 cursor-pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.playful-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+.playful-card:active {
+  transform: translateY(-2px) scale(1.01);
+}
+
+/* Sidebar slide animation */
+.sidebar-slide {
+  animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Bouncy pop animation */
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.pop-in {
+  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Wiggle animation for mascot */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+.wiggle {
+  animation: wiggle 2s ease-in-out infinite;
+}
+
+/* Float animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
