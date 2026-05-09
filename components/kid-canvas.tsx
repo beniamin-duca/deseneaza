@@ -23,6 +23,8 @@ interface KidCanvasProps {
   stampSrc?: string | null
   onStampPlaced?: () => void
   disabled?: boolean
+  initialImageBlob?: Blob | null
+  onCanvasIdle?: (blob: Blob) => void
 }
 
 export interface KidCanvasRef {
@@ -74,6 +76,8 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       stampSrc,
       onStampPlaced,
       disabled = false,
+      initialImageBlob,
+      onCanvasIdle,
     },
     ref
   ) {
@@ -84,6 +88,8 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     const templateImgRef = useRef<HTMLImageElement | null>(null)
     const templateBarrierRef = useRef<Uint8ClampedArray | null>(null)
     const stampImageRef = useRef<HTMLImageElement | null>(null)
+    const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const restoredRef = useRef(false)
     const [isDrawing, setIsDrawing] = useState(false)
     const [undoStack, setUndoStack] = useState<ImageData[]>([])
     const lastPointRef = useRef<Point | null>(null)
@@ -229,6 +235,29 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       img.src = stampSrc
     }, [stampSrc])
 
+    useEffect(() => {
+      if (!initialImageBlob || restoredRef.current) return
+      const ctx = ctxRef.current
+      const canvas = canvasRef.current
+      if (!ctx || !canvas) return
+
+      const img = new Image()
+      const url = URL.createObjectURL(initialImageBlob)
+      img.onload = () => {
+        const rect = canvas.getBoundingClientRect()
+        ctx.drawImage(img, 0, 0, rect.width, rect.height)
+        URL.revokeObjectURL(url)
+        restoredRef.current = true
+      }
+      img.src = url
+    }, [initialImageBlob])
+
+    useEffect(() => {
+      return () => {
+        if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+      }
+    }, [])
+
     const saveToUndoStack = useCallback(() => {
       const canvas = canvasRef.current
       const ctx = ctxRef.current
@@ -254,6 +283,18 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         return Math.max(2, Math.min(80, brushSize * (0.4 + pressure * 1.2)))
       }
       return brushSize
+    }
+
+    const scheduleIdleSave = () => {
+      if (!onCanvasIdle) return
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+      idleTimerRef.current = setTimeout(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        canvas.toBlob((blob) => {
+          if (blob) onCanvasIdle(blob)
+        }, 'image/png')
+      }, 1000)
     }
 
     const drawStroke = (from: Point, to: Point) => {
@@ -345,6 +386,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       ctx.drawImage(stampImg, x, y, stampSize, stampSize)
       saveToUndoStack()
       onStampPlaced?.()
+      scheduleIdleSave()
     }
 
     const handlePointerDown = (e: React.PointerEvent) => {
@@ -362,6 +404,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       if (tool === 'fill') {
         saveToUndoStack()
         floodFill(pos.x, pos.y, color)
+        scheduleIdleSave()
         return
       }
 
@@ -402,6 +445,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       if (isDrawing) {
         setIsDrawing(false)
         lastPointRef.current = null
+        scheduleIdleSave()
       }
     }
 
@@ -421,6 +465,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
           }
           return newStack
         })
+        scheduleIdleSave()
       },
       clear: () => {
         const ctx = ctxRef.current
@@ -430,6 +475,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         const rect = canvas.getBoundingClientRect()
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(0, 0, rect.width, rect.height)
+        scheduleIdleSave()
       },
       canUndo: () => undoStack.length > 0,
       getImageDataUrl: () => {
