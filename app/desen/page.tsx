@@ -87,6 +87,8 @@ function DrawingPageContent() {
   }
 
   const showTemplatesButton = mode === 'colorat' || mode === 'surpriza'
+  const anySidebarOpen = showTemplateSidebar || showStampSidebar
+  const canvasDisabled = mode === 'stampile' && !selectedStamp
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden relative">
@@ -100,6 +102,7 @@ function DrawingPageContent() {
         templateSrc={templateSrc}
         stampSrc={stampSrc}
         onStampPlaced={() => {}}
+        disabled={canvasDisabled}
       />
 
       {mode !== 'stampile' ? (
@@ -118,6 +121,7 @@ function DrawingPageContent() {
           }
           showTemplateButton={showTemplatesButton}
           canUndo={canUndo}
+          hidden={anySidebarOpen}
         />
       ) : (
         <StampsFloatingBar
@@ -127,6 +131,7 @@ function DrawingPageContent() {
           onClear={handleClear}
           onSave={handleSave}
           canUndo={canUndo}
+          hidden={anySidebarOpen}
         />
       )}
 
@@ -161,6 +166,7 @@ interface StampsFloatingBarProps {
   onClear: () => void
   onSave: () => void
   canUndo: boolean
+  hidden?: boolean
 }
 
 function StampsFloatingBar({
@@ -170,9 +176,15 @@ function StampsFloatingBar({
   onClear,
   onSave,
   canUndo,
+  hidden,
 }: StampsFloatingBarProps) {
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+    <div
+      className={cn(
+        'fixed bottom-6 left-1/2 -translate-x-1/2 z-30 transition-opacity duration-200',
+        hidden ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      )}
+    >
       <div className="floating-toolbar px-3 py-2 pop-in">
         <div className="floating-toolbar-inner flex items-center gap-2">
           <button
