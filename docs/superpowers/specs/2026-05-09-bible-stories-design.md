@@ -16,14 +16,18 @@ This spec covers the technical system + the canonical list of 50 stories with sa
 - In-progress drawings auto-save and resume — including on different sessions on the same device.
 - Finished drawings show as thumbnails on the landing checkpoint.
 - All 50 retellings written in kid-friendly Romanian for v1.
+- A minimal password-gated admin at `/admin/povesti` that lets the owner edit any story's title, scripture ref, summary, paragraphs, and accent color without redeploying. Story structure (order, testament, id) stays code-controlled.
 
 ## Non-goals
 
-- Cross-device sync. localStorage / IndexedDB are device-bound. Adding accounts is a v2 question.
+- Cross-device sync of kid progress. localStorage / IndexedDB are device-bound. Adding kid accounts is a v2 question.
 - Bible-themed coloring templates per story. Tracked as a follow-up content task; v1 ships with blank canvases.
 - Doctrinal commentary, multiple translations, audio narration, parental dashboards. Pure read + draw.
 - A "parents can unlock all" override. Strict linear progression for v1; override is easy to add later if requested.
 - Multi-user profiles on one device.
+- Admin: adding, removing, or reordering stories. v1 admin edits content of the 50 baked-in stories only.
+- Admin: uploading templates / images. Image uploads need Vercel Blob and stricter security; deferred.
+- Admin: multiple users, roles, audit log. v1 is single shared password.
 
 ## Design
 
@@ -277,6 +281,95 @@ A simple palette so each checkpoint glow feels distinct without needing per-stor
 
 These map to existing `--coral / --mint / --yellow` tokens plus a few new hex values, scoped to the stories module.
 
+## Admin
+
+A minimal owner-only surface for editing the editable fields of each story. Built same-stack (Next.js App Router, server components + a few client form components, Vercel KV) — no new framework.
+
+### Editable fields
+
+The admin can edit, per story:
+- `titleRo`
+- `scriptureRef`
+- `summary`
+- `paragraphs` (array of strings, edited as one textarea per paragraph plus add/remove paragraph buttons)
+- `accentColor` (hex via `<input type="color">`)
+- `templateSrc` (text URL, useful when bible-themed templates land later)
+
+Not editable from admin (immutable structure):
+- `id`, `order`, `testament` — these affect the unlock graph and route paths.
+
+### Read path: TS file is the seed, KV holds overrides
+
+`lib/stories.ts` keeps the canonical list of 50 stories with default content. At runtime, `getStoryById(id)` and `getAllStories()` (used by `/povesti` and `/povesti/[id]`) merge each story with any override stored in KV under key `stories:override:<id>`. The default seed always exists in code, so:
+- If KV is empty (fresh deploy / KV outage), the public site still works with the seed.
+- If KV has overrides, they shallow-merge on top of the seed (override fields win, missing fields fall through to seed).
+
+The merge is shallow per top-level field — paragraphs is an array, the entire array is replaced when overridden, not element-wise merged.
+
+### Storage — Vercel KV
+
+KV is Upstash Redis behind the scenes; free tier (~30 k requests/day, 256 MB) is plenty for this surface. Keys:
+
+- `stories:override:<id>` — JSON string. Body: `{ titleRo?, scriptureRef?, summary?, paragraphs?, accentColor?, templateSrc?, updatedAt }`. Only fields the admin actually changed are stored — leaving a field absent means "use the seed".
+
+Reads use `kv.mget(...)` with all 50 ids when populating the landing or `kv.get(...)` for a single story page. No additional caches; KV latency from Vercel functions is low enough.
+
+After a successful admin write, the API route calls `revalidatePath('/povesti')` and `revalidatePath('/povesti/' + id)` to flush any Next.js data cache for those paths.
+
+### Auth — single shared password
+
+Two env vars:
+- `ADMIN_PASSWORD` — the password the owner types in
+- `ADMIN_SECRET` — random 32+ byte string used to HMAC-sign the auth cookie (different from `ADMIN_PASSWORD` so a stolen cookie can't reveal the password)
+
+Flow:
+1. Visitor hits `/admin/povesti` without a valid cookie → middleware redirects to `/admin/login`.
+2. Login page POSTs `{ password }` to `POST /api/admin/login`. Server compares (constant-time) against `ADMIN_PASSWORD`.
+3. On match: server signs a cookie payload `{ exp: now + 7d, v: 1 }` with `ADMIN_SECRET` (HMAC-SHA256), sets `riza_admin` cookie (`httpOnly`, `secure` in prod, `sameSite=lax`, 7-day expiry).
+4. Subsequent requests: `middleware.ts` verifies the cookie HMAC and expiry, allows or redirects.
+5. `POST /api/admin/logout` clears the cookie.
+
+No rate limiting in v1. Mitigation: require a strong `ADMIN_PASSWORD` (≥ 16 chars). Documented in the README addition.
+
+### Routes
+
+Public (already in spec):
+- `/povesti`, `/povesti/[id]`, `/`
+
+Admin (new):
+- `/admin/login` — password form (server component + client form)
+- `/admin/povesti` — table of all 50 stories with status (default vs overridden) and edit links; a small header with "Logout"
+- `/admin/povesti/[id]` — edit form for one story; "Save", "Reset to default" (deletes the KV override), and "Cancel" buttons
+
+API (new):
+- `POST /api/admin/login` — `{ password }` → sets cookie or 401
+- `POST /api/admin/logout` — clears cookie
+- `PUT /api/admin/stories/[id]` — body is the override JSON; persists to KV + revalidates
+- `DELETE /api/admin/stories/[id]` — removes the override; revalidates
+
+`middleware.ts` matches `/admin/(.*)` and `/api/admin/(.*)` (excluding `/admin/login` and `POST /api/admin/login`) and redirects unauthenticated requests.
+
+### Admin UI
+
+Plain functional design (not kid-themed). Tailwind defaults, neutral palette, generous spacing, larger typography. No animations. Mobile-friendly but desktop is the expected device for editing.
+
+- **List page**: a vertical list of `<details>`-style cards or a simple table with columns `[order, id, title, scripture, status (default | override), edit →]`. Filters at the top: testament (toate / vechi / nou), status (toate / overridden).
+- **Edit page**: form with one labeled field per editable property. Paragraphs render as a stack of `<textarea>`s with "Adauga paragraf" and per-row remove buttons. The diff against the seed is shown subtly so the admin sees what changed.
+- **Save**: PUT to API; on success, sonner toast "Salvat" and stay on the page.
+- **Reset to default**: confirmation dialog ("Stergi modificarile?") → DELETE to API → form repopulates from seed.
+
+### Env vars and setup
+
+Required:
+- `ADMIN_PASSWORD` — set in Vercel project env vars
+- `ADMIN_SECRET` — set in Vercel project env vars (`openssl rand -hex 32`)
+
+Vercel KV:
+- Owner adds the KV integration in the Vercel dashboard (single click); `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `KV_URL` etc. populate automatically.
+- Local dev: `vercel env pull .env.local` after the integration is attached.
+
+The README (or a short `docs/admin.md`) documents these steps so re-setting up later is one command per item.
+
 ## Verification
 
 - `pnpm exec tsc --noEmit` and `pnpm build` clean.
@@ -289,3 +382,14 @@ These map to existing `--coral / --mint / --yellow` tokens plus a few new hex va
 - Tablet breakpoint (1024 × 768): split view with story panel on the right; SideRail toolbar inside the canvas area.
 - Clear browser data → all stories return to locked except story 1; canvases empty.
 - Real device LAN test (per the previous spec's recipe): drawing latency, scroll smoothness, drawer dismissal.
+
+### Admin verification
+
+- Without auth, `/admin/povesti` redirects to `/admin/login`.
+- Login with the correct password sets the `riza_admin` cookie; subsequent admin pages load.
+- Login with an incorrect password returns 401 and stays on the login page.
+- Edit a story title in admin → save → reload `/povesti/[id]` → updated title appears.
+- "Reset to default" on an overridden story → public page shows the seed value again.
+- Direct API calls without auth (e.g. `curl PUT /api/admin/stories/creatie`) return 401.
+- `ADMIN_PASSWORD` env unset → admin login route returns a clear "admin not configured" error rather than crashing.
+- Logout clears the cookie; `/admin/povesti` redirects to `/admin/login` again.
