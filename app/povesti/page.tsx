@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useMemo, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast, Toaster } from 'sonner'
 import { FloatingTopBar } from '@/components/floating-top-bar'
@@ -13,7 +13,7 @@ import {
 } from '@/lib/progress'
 
 function PovestiContent() {
-  const stories = getAllStories()
+  const stories = useMemo(() => getAllStories(), [])
   const router = useRouter()
   const searchParams = useSearchParams()
   const completedId = searchParams.get('completed')
@@ -24,22 +24,27 @@ function PovestiContent() {
 
   useEffect(() => {
     let cancelled = false
-    loadAllStatuses().then(async (map) => {
-      if (cancelled) return
-      setStatuses(map)
-      const blobs = new Map<string, Blob>()
-      for (const story of stories) {
-        const s = map.get(story.id)
-        if (s === 'in-progress' || s === 'done') {
-          const blob = await loadCanvas(story.id)
-          if (blob) blobs.set(story.id, blob)
+    loadAllStatuses()
+      .then(async (map) => {
+        if (cancelled) return
+        setStatuses(map)
+        const blobs = new Map<string, Blob>()
+        for (const story of stories) {
+          const s = map.get(story.id)
+          if (s === 'in-progress' || s === 'done') {
+            const blob = await loadCanvas(story.id)
+            if (blob) blobs.set(story.id, blob)
+          }
         }
-      }
-      if (!cancelled) {
-        setThumbs(blobs)
-        setLoaded(true)
-      }
-    })
+        if (!cancelled) {
+          setThumbs(blobs)
+          setLoaded(true)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load story progress', err)
+        if (!cancelled) setLoaded(true)
+      })
     return () => {
       cancelled = true
     }

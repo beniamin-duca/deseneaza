@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Paintbrush } from 'lucide-react'
 import { FloatingTopBar } from '@/components/floating-top-bar'
 import { FloatingToolbar, type Tool } from '@/components/floating-toolbar'
 import { StampSidebar } from '@/components/stamp-sidebar'
@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { type Stamp } from '@/lib/templates'
-import { getStoryById } from '@/lib/stories'
+import { getStoryById, type Story } from '@/lib/stories'
 import {
   getStatus,
   loadCanvas,
@@ -55,6 +55,7 @@ function StoryDetailContent() {
   const [showStoryDrawer, setShowStoryDrawer] = useState(false)
   const [initialBlob, setInitialBlob] = useState<Blob | null | undefined>(undefined)
   const [accessChecked, setAccessChecked] = useState(false)
+  const [hasStarted, setHasStarted] = useState(false)
 
   useEffect(() => {
     if (!story) {
@@ -79,7 +80,10 @@ function StoryDetailContent() {
     if (!accessChecked || !story) return
     let cancelled = false
     loadCanvas(story.id).then((blob) => {
-      if (!cancelled) setInitialBlob(blob)
+      if (cancelled) return
+      setInitialBlob(blob)
+      // Skip splash for returning kids who already have a drawing in progress.
+      if (blob) setHasStarted(true)
     })
     return () => {
       cancelled = true
@@ -99,6 +103,10 @@ function StoryDetailContent() {
         <div className="animate-spin size-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     )
+  }
+
+  if (!hasStarted) {
+    return <StorySplash story={story} onStart={() => setHasStarted(true)} />
   }
 
   const handleColorChange = (newColor: string) => {
@@ -151,6 +159,12 @@ function StoryDetailContent() {
     <div className="h-screen flex bg-background overflow-hidden relative">
       <FloatingTopBar title={story.titleRo} backHref="/povesti" />
 
+      {!isMobile && (
+        <aside className="w-[340px] border-r border-border/50 shrink-0">
+          <StoryPanel story={story} onDone={handleDone} />
+        </aside>
+      )}
+
       <div className="flex-1 flex flex-col relative">
         <KidCanvas
           ref={canvasRef}
@@ -190,12 +204,6 @@ function StoryDetailContent() {
           hidden={showStampSidebar || showStoryDrawer}
         />
       </div>
-
-      {!isMobile && (
-        <aside className="w-[340px] border-l border-border/50 shrink-0">
-          <StoryPanel story={story} onDone={handleDone} />
-        </aside>
-      )}
 
       {isMobile && (
         <Drawer
@@ -260,6 +268,50 @@ function StoryDetailContent() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+function StorySplash({ story, onStart }: { story: Story; onStart: () => void }) {
+  return (
+    <main
+      className="min-h-screen relative pb-32"
+      style={{
+        background:
+          'radial-gradient(ellipse at top, #FFF4D6 0%, #F5E6BC 60%, #E8D69E 100%)',
+      }}
+    >
+      <FloatingTopBar title={story.titleRo} backHref="/povesti" />
+
+      <div className="pt-24 px-6 max-w-2xl mx-auto">
+        <header
+          className="text-center py-6 px-4 rounded-3xl mb-6 shadow-lg"
+          style={{ backgroundColor: story.accentColor }}
+        >
+          <h1 className="font-display text-3xl font-bold text-white">
+            {story.titleRo}
+          </h1>
+          <p className="text-white/90 text-sm mt-1">{story.scriptureRef}</p>
+        </header>
+
+        <div className="bg-white/85 backdrop-blur-sm rounded-3xl p-6 shadow-lg space-y-4">
+          {story.paragraphs.map((p, i) => (
+            <p key={i} className="text-base leading-relaxed text-foreground">
+              {p}
+            </p>
+          ))}
+        </div>
+      </div>
+
+      <div className="fixed bottom-6 inset-x-0 px-6 z-30">
+        <button
+          onClick={onStart}
+          className="mx-auto block max-w-md w-full h-14 rounded-full font-display text-xl font-bold bg-mint hover:bg-mint-dark text-white shadow-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <Paintbrush className="w-5 h-5" />
+          Incepe sa desenezi!
+        </button>
+      </div>
+    </main>
   )
 }
 
