@@ -22,6 +22,7 @@ interface KidCanvasProps {
   templateSrc?: string | null
   stampSrc?: string | null
   onStampPlaced?: () => void
+  disabled?: boolean
 }
 
 export interface KidCanvasRef {
@@ -36,7 +37,15 @@ const TEMPLATE_BARRIER_THRESHOLD = 80
 
 export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
   function KidCanvas(
-    { tool, color, brushSize, templateSrc, stampSrc, onStampPlaced },
+    {
+      tool,
+      color,
+      brushSize,
+      templateSrc,
+      stampSrc,
+      onStampPlaced,
+      disabled = false,
+    },
     ref
   ) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -210,6 +219,14 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       return { x: e.clientX - rect.left, y: e.clientY - rect.top }
     }
 
+    const effectiveBrushSize = (e: React.PointerEvent): number => {
+      if (e.pointerType === 'pen') {
+        const pressure = Math.max(0.05, e.pressure || 0.5)
+        return Math.max(2, Math.min(80, brushSize * (0.4 + pressure * 1.2)))
+      }
+      return brushSize
+    }
+
     const drawStroke = (from: Point, to: Point) => {
       const ctx = ctxRef.current
       if (!ctx) return
@@ -302,6 +319,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     }
 
     const handlePointerDown = (e: React.PointerEvent) => {
+      if (disabled) return
       e.preventDefault()
       const pos = getPointerPos(e)
       const ctx = ctxRef.current
@@ -322,12 +340,13 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       setIsDrawing(true)
       lastPointRef.current = pos
 
+      const size = effectiveBrushSize(e)
       if (tool === 'eraser') {
         ctx.strokeStyle = '#FFFFFF'
-        ctx.lineWidth = brushSize * 2
+        ctx.lineWidth = size * 2
       } else {
         ctx.strokeStyle = color
-        ctx.lineWidth = brushSize
+        ctx.lineWidth = size
       }
 
       ctx.beginPath()
@@ -337,8 +356,14 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     }
 
     const handlePointerMove = (e: React.PointerEvent) => {
-      if (!isDrawing || !lastPointRef.current) return
+      if (disabled || !isDrawing || !lastPointRef.current) return
       e.preventDefault()
+      const ctx = ctxRef.current
+      if (!ctx) return
+      if (tool === 'eraser' || tool === 'brush') {
+        const size = effectiveBrushSize(e)
+        ctx.lineWidth = tool === 'eraser' ? size * 2 : size
+      }
       const pos = getPointerPos(e)
       drawStroke(lastPointRef.current, pos)
       lastPointRef.current = pos
