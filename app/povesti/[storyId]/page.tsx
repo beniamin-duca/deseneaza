@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, Suspense } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { BookOpen, Paintbrush } from 'lucide-react'
-import { FloatingTopBar } from '@/components/floating-top-bar'
+import { TopHeader } from '@/components/top-header'
 import { FloatingToolbar, type Tool } from '@/components/floating-toolbar'
 import { StampSidebar } from '@/components/stamp-sidebar'
 import { KidCanvas, type KidCanvasRef } from '@/components/kid-canvas'
@@ -156,53 +156,55 @@ function StoryDetailContent() {
   const canvasDisabled = tool === 'stamp' && !selectedStamp
 
   return (
-    <div className="h-screen flex bg-background overflow-hidden relative">
-      <FloatingTopBar title={story.titleRo} backHref="/povesti" />
+    <div className="h-screen flex flex-col bg-background overflow-hidden relative">
+      <TopHeader title={story.titleRo} backHref="/povesti" />
 
-      {!isMobile && (
-        <aside className="w-[340px] border-r border-border/50 shrink-0">
-          <StoryPanel story={story} onDone={handleDone} />
-        </aside>
-      )}
-
-      <div className="flex-1 flex flex-col relative">
-        <KidCanvas
-          ref={canvasRef}
-          tool={tool}
-          color={color}
-          brushSize={brushSize}
-          templateSrc={story.templateSrc}
-          stampSrc={stampSrc}
-          disabled={canvasDisabled}
-          initialImageBlob={initialBlob}
-          onCanvasIdle={handleCanvasIdle}
-        />
-
-        {isMobile && (
-          <button
-            onClick={() => setShowStoryDrawer(true)}
-            className="fixed top-20 left-4 z-30 floating-toolbar px-4 py-2 flex items-center gap-2 text-sm font-medium text-foreground"
-            aria-label="Citeste povestea"
-          >
-            <BookOpen className="w-4 h-4" />
-            Povestea
-          </button>
+      <div className="flex-1 flex overflow-hidden">
+        {!isMobile && (
+          <aside className="w-[340px] border-r border-border/50 shrink-0">
+            <StoryPanel story={story} onDone={handleDone} />
+          </aside>
         )}
 
-        <FloatingToolbar
-          activeTool={tool}
-          onToolChange={setTool}
-          activeColor={color}
-          onColorChange={handleColorChange}
-          brushSize={brushSize}
-          onBrushSizeChange={handleBrushSizeChange}
-          onUndo={handleUndo}
-          onClear={handleClear}
-          onSave={handleSave}
-          onShowStamps={() => setShowStampSidebar(true)}
-          canUndo={canUndo}
-          hidden={showStampSidebar || showStoryDrawer}
-        />
+        <div className="flex-1 flex flex-col relative">
+          <KidCanvas
+            ref={canvasRef}
+            tool={tool}
+            color={color}
+            brushSize={brushSize}
+            templateSrc={story.templateSrc}
+            stampSrc={stampSrc}
+            disabled={canvasDisabled}
+            initialImageBlob={initialBlob}
+            onCanvasIdle={handleCanvasIdle}
+          />
+
+          {isMobile && (
+            <button
+              onClick={() => setShowStoryDrawer(true)}
+              className="fixed top-20 left-4 z-30 floating-toolbar px-4 py-2 flex items-center gap-2 text-sm font-medium text-foreground"
+              aria-label="Citeste povestea"
+            >
+              <BookOpen className="w-4 h-4" />
+              Povestea
+            </button>
+          )}
+
+          <FloatingToolbar
+            activeTool={tool}
+            onToolChange={setTool}
+            activeColor={color}
+            onColorChange={handleColorChange}
+            brushSize={brushSize}
+            onBrushSizeChange={handleBrushSizeChange}
+            onUndo={handleUndo}
+            onClear={handleClear}
+            onSave={handleSave}
+            onShowStamps={() => setShowStampSidebar(true)}
+            canUndo={canUndo}
+            hidden={showStampSidebar || showStoryDrawer}
+          />
+        </div>
       </div>
 
       {isMobile && (
@@ -273,43 +275,45 @@ function StoryDetailContent() {
 
 function StorySplash({ story, onStart }: { story: Story; onStart: () => void }) {
   return (
-    <main
-      className="min-h-screen relative pb-32"
-      style={{
-        background:
-          'radial-gradient(ellipse at top, #FFF4D6 0%, #F5E6BC 60%, #E8D69E 100%)',
-      }}
-    >
-      <FloatingTopBar title={story.titleRo} backHref="/povesti" />
+    <main className="min-h-screen flex flex-col bg-background">
+      <TopHeader title={story.titleRo} backHref="/povesti" />
 
-      <div className="pt-24 px-6 max-w-2xl mx-auto">
-        <header
-          className="text-center py-6 px-4 rounded-3xl mb-6 shadow-lg"
-          style={{ backgroundColor: story.accentColor }}
-        >
-          <h1 className="font-display text-3xl font-bold text-white">
-            {story.titleRo}
-          </h1>
-          <p className="text-white/90 text-sm mt-1">{story.scriptureRef}</p>
-        </header>
+      <div
+        className="flex-1 relative pb-32"
+        style={{
+          background:
+            'radial-gradient(ellipse at top, #FFF4D6 0%, #F5E6BC 60%, #E8D69E 100%)',
+        }}
+      >
+        <div className="pt-8 px-6 max-w-2xl mx-auto">
+          <header
+            className="text-center py-6 px-4 rounded-3xl mb-6 shadow-lg"
+            style={{ backgroundColor: story.accentColor }}
+          >
+            <h1 className="font-display text-3xl font-bold text-white">
+              {story.titleRo}
+            </h1>
+            <p className="text-white/90 text-sm mt-1">{story.scriptureRef}</p>
+          </header>
 
-        <div className="bg-white/85 backdrop-blur-sm rounded-3xl p-6 shadow-lg space-y-4">
-          {story.paragraphs.map((p, i) => (
-            <p key={i} className="text-base leading-relaxed text-foreground">
-              {p}
-            </p>
-          ))}
+          <div className="bg-white/85 backdrop-blur-sm rounded-3xl p-6 shadow-lg space-y-4">
+            {story.paragraphs.map((p, i) => (
+              <p key={i} className="text-base leading-relaxed text-foreground">
+                {p}
+              </p>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="fixed bottom-6 inset-x-0 px-6 z-30">
-        <button
-          onClick={onStart}
-          className="mx-auto block max-w-md w-full h-14 rounded-full font-display text-xl font-bold bg-mint hover:bg-mint-dark text-white shadow-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <Paintbrush className="w-5 h-5" />
-          Incepe sa desenezi!
-        </button>
+        <div className="fixed bottom-6 inset-x-0 px-6 z-30">
+          <button
+            onClick={onStart}
+            className="mx-auto block max-w-md w-full h-14 rounded-full font-display text-xl font-bold bg-mint hover:bg-mint-dark text-white shadow-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <Paintbrush className="w-5 h-5" />
+            Incepe sa desenezi!
+          </button>
+        </div>
       </div>
     </main>
   )

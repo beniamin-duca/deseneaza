@@ -12,15 +12,19 @@ interface StoryPanelProps {
 export function StoryPanel({ story, onDone, doneDisabled = false }: StoryPanelProps) {
   return (
     <div className="flex flex-col h-full bg-white">
-      <header
-        className="px-5 py-4 text-white"
+      <div
+        aria-hidden
+        className="h-1.5 shrink-0"
         style={{ backgroundColor: story.accentColor }}
-      >
-        <h1 className="font-display text-xl font-bold">{story.titleRo}</h1>
-        <p className="text-sm opacity-90">{story.scriptureRef}</p>
-      </header>
+      />
 
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+        <p
+          className="text-xs font-medium uppercase tracking-wide"
+          style={{ color: story.accentColor }}
+        >
+          {story.scriptureRef}
+        </p>
         {story.paragraphs.map((p, i) => (
           <p key={i} className="text-base leading-relaxed text-foreground">
             {p}
