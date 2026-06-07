@@ -28,6 +28,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { type Stamp } from '@/lib/templates'
 import { type Story } from '@/lib/stories'
 import { useStory } from '@/lib/use-stories'
+import { useCustomColors } from '@/lib/use-custom-colors'
 import {
   getStatus,
   loadCanvas,
@@ -44,6 +45,7 @@ function StoryDetailContent() {
   const story = useStory(params.storyId)
 
   const canvasRef = useRef<KidCanvasRef>(null)
+  const { customColors, addCustom, removeCustom } = useCustomColors()
   const [tool, setTool] = useState<Tool>('brush')
   const [color, setColor] = useState('#FF6B6B')
   const [brushSize, setBrushSize] = useState(16)
@@ -204,6 +206,9 @@ function StoryDetailContent() {
             onShowStamps={() => setShowStampSidebar(true)}
             canUndo={canUndo}
             hidden={showStampSidebar || showStoryDrawer}
+            customColors={customColors}
+            onAddCustom={addCustom}
+            onRemoveCustom={removeCustom}
           />
         </div>
       </div>

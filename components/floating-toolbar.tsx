@@ -1,7 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { DRAWING_COLORS, BRUSH_SIZES } from '@/lib/templates'
+import { BRUSH_SIZES } from '@/lib/templates'
 import {
   Paintbrush,
   Eraser,
@@ -13,6 +14,8 @@ import {
   Stamp,
 } from 'lucide-react'
 import { ColorPopover } from './color-popover'
+import { ColorPalette } from './color-palette'
+import { CustomColorDialog } from './custom-color-dialog'
 import { SizePopover } from './size-popover'
 
 export type Tool = 'brush' | 'eraser' | 'fill' | 'stamp'
@@ -32,7 +35,12 @@ interface FloatingToolbarProps {
   canUndo: boolean
   showTemplateButton?: boolean
   hidden?: boolean
+  customColors: string[]
+  onAddCustom: (hex: string) => void
+  onRemoveCustom: (hex: string) => void
 }
+
+type DockProps = FloatingToolbarProps & { onRequestCustom: () => void }
 
 const TOOLS = [
   { id: 'brush' as Tool, icon: Paintbrush, label: 'Pensula' },
@@ -41,10 +49,21 @@ const TOOLS = [
 ]
 
 export function FloatingToolbar(props: FloatingToolbarProps) {
+  const [customOpen, setCustomOpen] = useState(false)
+  const requestCustom = () => setCustomOpen(true)
   return (
     <>
-      <BottomDock {...props} />
-      <SideRail {...props} />
+      <BottomDock {...props} onRequestCustom={requestCustom} />
+      <SideRail {...props} onRequestCustom={requestCustom} />
+      <CustomColorDialog
+        open={customOpen}
+        onOpenChange={setCustomOpen}
+        initialColor={props.activeColor}
+        onConfirm={(hex) => {
+          props.onColorChange(hex)
+          props.onAddCustom(hex)
+        }}
+      />
     </>
   )
 }
@@ -64,7 +83,10 @@ function BottomDock({
   canUndo,
   showTemplateButton,
   hidden,
-}: FloatingToolbarProps) {
+  customColors,
+  onRemoveCustom,
+  onRequestCustom,
+}: DockProps) {
   return (
     <div
       className={cn(
@@ -142,6 +164,9 @@ function BottomDock({
           <ColorPopover
             activeColor={activeColor}
             onColorChange={onColorChange}
+            customColors={customColors}
+            onRemoveCustom={onRemoveCustom}
+            onRequestCustom={onRequestCustom}
             side="top"
           />
           <SizePopover
@@ -186,7 +211,10 @@ function SideRail({
   onShowStamps,
   canUndo,
   showTemplateButton,
-}: FloatingToolbarProps) {
+  customColors,
+  onRemoveCustom,
+  onRequestCustom,
+}: DockProps) {
   return (
     <div className="hidden md:flex fixed right-4 top-1/2 -translate-y-1/2 z-30 max-h-[calc(100vh-2rem)]">
       <div className="floating-toolbar px-2 py-3 pop-in flex flex-col items-center gap-2 max-h-[calc(100vh-2rem)] overflow-y-auto">
@@ -256,21 +284,14 @@ function SideRail({
 
         <div className="h-px w-8 bg-border my-1" />
 
-        <div className="grid grid-cols-2 gap-2">
-          {DRAWING_COLORS.map((color) => (
-            <button
-              key={color.id}
-              onClick={() => onColorChange(color.value)}
-              className={cn(
-                'color-swatch',
-                activeColor === color.value && 'active'
-              )}
-              style={{ backgroundColor: color.value, width: 40, height: 40 }}
-              aria-label={color.name}
-              title={color.name}
-            />
-          ))}
-        </div>
+        <ColorPalette
+          activeColor={activeColor}
+          onColorChange={onColorChange}
+          customColors={customColors}
+          onRemoveCustom={onRemoveCustom}
+          onRequestCustom={onRequestCustom}
+          variant="rail"
+        />
 
         <div className="h-px w-8 bg-border my-1" />
 

@@ -11,6 +11,7 @@ import { KidCanvas, type KidCanvasRef } from '@/components/kid-canvas'
 import { SaveShareSheet } from '@/components/save-share-sheet'
 import { type Template, type Stamp } from '@/lib/templates'
 import { saveDraft, loadDraft, clearDraft } from '@/lib/progress'
+import { useCustomColors } from '@/lib/use-custom-colors'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,7 @@ function DrawingPageContent() {
   const mode: DrawMode = isDrawMode(modeParam) ? modeParam : 'blank'
 
   const canvasRef = useRef<KidCanvasRef>(null)
+  const { customColors, addCustom, removeCustom } = useCustomColors()
   const [tool, setTool] = useState<Tool>('brush')
   const [color, setColor] = useState('#FF6B6B')
   const [brushSize, setBrushSize] = useState(16)
@@ -216,6 +218,9 @@ function DrawingPageContent() {
         showTemplateButton={showTemplatesButton}
         canUndo={canUndo}
         hidden={anySidebarOpen}
+        customColors={customColors}
+        onAddCustom={addCustom}
+        onRemoveCustom={removeCustom}
       />
 
       <TemplateSidebar
