@@ -38,6 +38,8 @@ export interface KidCanvasRef {
 
 const MAX_UNDO_STACK = 20
 const TEMPLATE_BARRIER_THRESHOLD = 80
+// How close (per RGB channel) a pixel must be to the seed color to be flooded.
+const FILL_TOLERANCE = 32
 
 // Inline SVG cursors per tool. Hotspot is the natural "active tip"
 // of each tool. Brush + fill use the active color so the kid sees
@@ -345,36 +347,94 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
 
       if (startR === fillR && startG === fillG && startB === fillB) return
 
-      const tolerance = 32
-      const visited = new Uint8Array(width * height)
-      const stack: number[] = [py * width + px]
+      const filled = new Uint8Array(width * height)
+      const boundary: number[] = []
 
-      while (stack.length > 0) {
-        const pos = stack.pop()!
-        if (visited[pos]) continue
-        if (barrier && barrier[pos] === 1) continue
-
+      const matches = (pos: number): boolean => {
+        if (barrier && barrier[pos] === 1) return false
         const idx = pos * 4
-        if (
-          Math.abs(data[idx] - startR) > tolerance ||
-          Math.abs(data[idx + 1] - startG) > tolerance ||
-          Math.abs(data[idx + 2] - startB) > tolerance
-        ) {
-          continue
-        }
+        return (
+          Math.abs(data[idx] - startR) <= FILL_TOLERANCE &&
+          Math.abs(data[idx + 1] - startG) <= FILL_TOLERANCE &&
+          Math.abs(data[idx + 2] - startB) <= FILL_TOLERANCE
+        )
+      }
 
-        visited[pos] = 1
+      const paint = (pos: number) => {
+        const idx = pos * 4
         data[idx] = fillR
         data[idx + 1] = fillG
         data[idx + 2] = fillB
         data[idx + 3] = 255
+      }
 
+      // Flood the contiguous same-color region (4-connected). Pixels are marked
+      // `filled` at push time so each is processed once and the stack stays
+      // bounded. A pixel that touches a non-matching/blocked neighbour is a
+      // boundary pixel and seeds the dilation pass below.
+      const start = py * width + px
+      filled[start] = 1
+      paint(start)
+      const stack: number[] = [start]
+
+      while (stack.length > 0) {
+        const pos = stack.pop()!
         const x = pos % width
         const y = (pos - x) / width
-        if (x + 1 < width) stack.push(pos + 1)
-        if (x - 1 >= 0) stack.push(pos - 1)
-        if (y + 1 < height) stack.push(pos + width)
-        if (y - 1 >= 0) stack.push(pos - width)
+        let isBoundary = false
+
+        const visit = (npos: number, inBounds: boolean) => {
+          if (!inBounds) {
+            isBoundary = true
+            return
+          }
+          if (filled[npos]) return
+          if (matches(npos)) {
+            filled[npos] = 1
+            paint(npos)
+            stack.push(npos)
+          } else {
+            isBoundary = true
+          }
+        }
+
+        visit(pos + 1, x + 1 < width)
+        visit(pos - 1, x - 1 >= 0)
+        visit(pos + width, y + 1 < height)
+        visit(pos - width, y - 1 >= 0)
+
+        if (isBoundary) boundary.push(pos)
+      }
+
+      // Dilation: grow the filled region outward by ~1 CSS px (round(dpr) device
+      // px, 8-connected) into adjacent non-barrier pixels. This covers the 1-2px
+      // anti-aliased seam between the fill edge and the separate, multiply-blended
+      // contour overlay — the visible white/grey halo — without bleeding past the
+      // dark contour, since the template barrier still stops the growth.
+      const dilatePasses = Math.max(1, Math.round(dpr))
+      let frontier = boundary
+      for (let pass = 0; pass < dilatePasses && frontier.length > 0; pass++) {
+        const next: number[] = []
+        for (const pos of frontier) {
+          const x = pos % width
+          const y = (pos - x) / width
+          for (let dy = -1; dy <= 1; dy++) {
+            const ny = y + dy
+            if (ny < 0 || ny >= height) continue
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dy === 0) continue
+              const nx = x + dx
+              if (nx < 0 || nx >= width) continue
+              const npos = ny * width + nx
+              if (filled[npos]) continue
+              if (barrier && barrier[npos] === 1) continue
+              filled[npos] = 1
+              paint(npos)
+              next.push(npos)
+            }
+          }
+        }
+        frontier = next
       }
 
       ctx.putImageData(imageData, 0, 0)
