@@ -25,6 +25,8 @@ interface KidCanvasProps {
   disabled?: boolean
   initialImageBlob?: Blob | null
   onCanvasIdle?: (blob: Blob) => void
+  onStrokeStart?: () => void
+  onStrokeEnd?: () => void
 }
 
 export interface KidCanvasRef {
@@ -78,6 +80,8 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       disabled = false,
       initialImageBlob,
       onCanvasIdle,
+      onStrokeStart,
+      onStrokeEnd,
     },
     ref
   ) {
@@ -387,11 +391,13 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       saveToUndoStack()
       onStampPlaced?.()
       scheduleIdleSave()
+      onStrokeEnd?.()
     }
 
     const handlePointerDown = (e: React.PointerEvent) => {
       if (disabled) return
       e.preventDefault()
+      onStrokeStart?.()
       const pos = getPointerPos(e)
       const ctx = ctxRef.current
       if (!ctx) return
@@ -405,6 +411,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         saveToUndoStack()
         floodFill(pos.x, pos.y, color)
         scheduleIdleSave()
+        onStrokeEnd?.()
         return
       }
 
@@ -446,6 +453,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         setIsDrawing(false)
         lastPointRef.current = null
         scheduleIdleSave()
+        onStrokeEnd?.()
       }
     }
 

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { Undo2 } from 'lucide-react'
 import { FloatingTopBar } from '@/components/floating-top-bar'
 import { FloatingToolbar, type Tool } from '@/components/floating-toolbar'
 import { TemplateSidebar } from '@/components/template-sidebar'
@@ -44,6 +45,8 @@ function DrawingPageContent() {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [selectedStamp, setSelectedStamp] = useState<Stamp | null>(null)
   const [canUndo, setCanUndo] = useState(false)
+  const [showUndoHint, setShowUndoHint] = useState(false)
+  const undoHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showSaveSheet, setShowSaveSheet] = useState(false)
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
   const [showTemplateSidebar, setShowTemplateSidebar] = useState(false)
@@ -85,6 +88,24 @@ function DrawingPageContent() {
     }, 100)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (undoHintTimerRef.current) clearTimeout(undoHintTimerRef.current)
+    }
+  }, [])
+
+  // Transient "Anuleaza ultima" pill: show right after a stroke ends, hide the
+  // instant the next stroke starts (so a kid continuing to draw can't tap it).
+  const handleStrokeStart = () => {
+    setShowUndoHint(false)
+    if (undoHintTimerRef.current) clearTimeout(undoHintTimerRef.current)
+  }
+  const handleStrokeEnd = () => {
+    setShowUndoHint(true)
+    if (undoHintTimerRef.current) clearTimeout(undoHintTimerRef.current)
+    undoHintTimerRef.current = setTimeout(() => setShowUndoHint(false), 2000)
+  }
 
   const handleUndo = () => canvasRef.current?.undo()
   const handleClear = () => setShowClearConfirm(true)
@@ -159,7 +180,24 @@ function DrawingPageContent() {
               }
             : undefined
         }
+        onStrokeStart={handleStrokeStart}
+        onStrokeEnd={handleStrokeEnd}
       />
+
+      {showUndoHint && !anySidebarOpen && (
+        <button
+          onClick={() => {
+            handleUndo()
+            setShowUndoHint(false)
+          }}
+          className="fixed bottom-24 left-4 z-30 floating-toolbar px-4 py-2 flex items-center gap-2 text-sm font-display text-foreground pop-in"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          aria-label="Anuleaza ultima"
+        >
+          <Undo2 className="w-4 h-4" />
+          Anuleaza ultima
+        </button>
+      )}
 
       <FloatingToolbar
         activeTool={tool}
