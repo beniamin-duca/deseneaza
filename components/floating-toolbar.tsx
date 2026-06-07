@@ -122,6 +122,21 @@ function BottomDock({
             </button>
           )}
 
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className={cn(
+              'tool-btn tool-btn--labeled',
+              canUndo
+                ? 'bg-muted/50 hover:bg-muted'
+                : 'bg-muted/30 text-muted-foreground/50 cursor-not-allowed'
+            )}
+            aria-label="Inapoi"
+          >
+            <Undo2 className="w-6 h-6" />
+            <span className="font-display text-[10px] leading-none">Inapoi</span>
+          </button>
+
           <div className="w-px h-8 bg-border" />
 
           <ColorPopover
@@ -137,19 +152,6 @@ function BottomDock({
 
           <div className="w-px h-8 bg-border" />
 
-          <button
-            onClick={onUndo}
-            disabled={!canUndo}
-            className={cn(
-              'tool-btn',
-              canUndo
-                ? 'bg-muted/50 hover:bg-muted'
-                : 'bg-muted/30 text-muted-foreground/50 cursor-not-allowed'
-            )}
-            aria-label="Inapoi"
-          >
-            <Undo2 className="w-6 h-6" />
-          </button>
           <button
             onClick={onClear}
             className="tool-btn bg-coral/10 hover:bg-coral/20 text-coral-dark"
@@ -236,6 +238,22 @@ function SideRail({
           </button>
         )}
 
+        <button
+          onClick={onUndo}
+          disabled={!canUndo}
+          className={cn(
+            'tool-btn tool-btn--labeled',
+            canUndo
+              ? 'bg-muted/50 hover:bg-muted'
+              : 'bg-muted/30 text-muted-foreground/50 cursor-not-allowed'
+          )}
+          aria-label="Inapoi"
+          title="Inapoi"
+        >
+          <Undo2 className="w-6 h-6" />
+          <span className="font-display text-[10px] leading-none">Inapoi</span>
+        </button>
+
         <div className="h-px w-8 bg-border my-1" />
 
         <div className="grid grid-cols-2 gap-2">
@@ -284,20 +302,6 @@ function SideRail({
 
         <div className="h-px w-8 bg-border my-1" />
 
-        <button
-          onClick={onUndo}
-          disabled={!canUndo}
-          className={cn(
-            'tool-btn',
-            canUndo
-              ? 'bg-muted/50 hover:bg-muted'
-              : 'bg-muted/30 text-muted-foreground/50 cursor-not-allowed'
-          )}
-          aria-label="Inapoi"
-          title="Inapoi"
-        >
-          <Undo2 className="w-6 h-6" />
-        </button>
         <button
           onClick={onClear}
           className="tool-btn bg-coral/10 hover:bg-coral/20 text-coral-dark"

@@ -186,6 +186,16 @@
   box-shadow: 0 4px 16px rgba(255, 107, 107, 0.4);
 }
 
+/* Tool button with a text label stacked under the icon (e.g. undo).
+   Keeps the 52px touch target but grows taller for the caption. */
+.tool-btn--labeled {
+  flex-direction: column;
+  gap: 1px;
+  height: auto;
+  min-height: 52px;
+  padding: 4px 6px;
+}
+
 /* Color swatch styles */
 .color-swatch {
   @apply relative rounded-full cursor-pointer transition-all duration-200;
