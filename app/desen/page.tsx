@@ -9,6 +9,7 @@ import { StampSidebar } from '@/components/stamp-sidebar'
 import { KidCanvas, type KidCanvasRef } from '@/components/kid-canvas'
 import { SaveShareSheet } from '@/components/save-share-sheet'
 import { type Template, type Stamp } from '@/lib/templates'
+import { saveDraft, loadDraft, clearDraft } from '@/lib/progress'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,12 +49,33 @@ function DrawingPageContent() {
   const [showTemplateSidebar, setShowTemplateSidebar] = useState(false)
   const [showStampSidebar, setShowStampSidebar] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  // Free-draw persistence (device-only IndexedDB draft). v1: 'blank' mode only —
+  // 'colorat' depends on a re-selectable template whose async load would race the
+  // restore, so it stays unpersisted for now.
+  const persistDraft = mode === 'blank'
+  const [initialBlob, setInitialBlob] = useState<Blob | null | undefined>(
+    undefined
+  )
 
   useEffect(() => {
     if (mode === 'colorat') {
       setShowTemplateSidebar(true)
     }
   }, [mode])
+
+  useEffect(() => {
+    if (!persistDraft) {
+      setInitialBlob(null)
+      return
+    }
+    let cancelled = false
+    loadDraft(mode).then((blob) => {
+      if (!cancelled) setInitialBlob(blob)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [mode, persistDraft])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -68,6 +90,7 @@ function DrawingPageContent() {
   const handleClear = () => setShowClearConfirm(true)
   const handleConfirmClear = () => {
     canvasRef.current?.clear()
+    if (persistDraft) clearDraft(mode).catch(() => {})
     setShowClearConfirm(false)
   }
   const handleSave = () => {
@@ -119,6 +142,7 @@ function DrawingPageContent() {
       <FloatingTopBar title={MODE_TITLES[mode]} />
 
       <KidCanvas
+        key={mode}
         ref={canvasRef}
         tool={tool}
         color={color}
@@ -127,6 +151,14 @@ function DrawingPageContent() {
         stampSrc={stampSrc}
         onStampPlaced={() => {}}
         disabled={canvasDisabled}
+        initialImageBlob={persistDraft ? initialBlob : null}
+        onCanvasIdle={
+          persistDraft
+            ? (blob) => {
+                saveDraft(mode, blob).catch(() => {})
+              }
+            : undefined
+        }
       />
 
       <FloatingToolbar
