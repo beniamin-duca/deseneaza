@@ -100,6 +100,12 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     const [isDrawing, setIsDrawing] = useState(false)
     const [undoStack, setUndoStack] = useState<ImageData[]>([])
     const lastPointRef = useRef<Point | null>(null)
+    // Whether the current stroke has moved (vs. a lone dot), the pre-action
+    // snapshot for reverting a dot when a pinch starts, and whether the kid has
+    // drawn anything yet (so a late async draft-restore can't clobber real work).
+    const strokeMovedRef = useRef(false)
+    const lastSnapshotRef = useRef<ImageData | null>(null)
+    const hasDrawnRef = useRef(false)
 
     // Pinch-to-zoom. Zoom/pan are PURELY visual (CSS transform on the inner
     // wrapper); the canvas backing store, dpr and barrier arrays stay untouched.
@@ -267,12 +273,15 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       const img = new Image()
       const url = URL.createObjectURL(initialImageBlob)
       img.onload = () => {
+        URL.revokeObjectURL(url)
+        restoredRef.current = true
+        // If the kid already started drawing during the (doubly async) load,
+        // don't paint the old opaque draft over their fresh work.
+        if (hasDrawnRef.current) return
         // Use the logical frame size, not canvas.getBoundingClientRect(), which
         // would be scaled if a pinch-zoom transform is active.
         const { w, h } = frameRef.current
         ctx.drawImage(img, 0, 0, w, h)
-        URL.revokeObjectURL(url)
-        restoredRef.current = true
       }
       img.src = url
     }, [initialImageBlob])
@@ -289,6 +298,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       const ctx = ctxRef.current
       if (!canvas || !ctx) return
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      lastSnapshotRef.current = imageData
       setUndoStack((prev) => {
         const newStack = [...prev, imageData]
         if (newStack.length > MAX_UNDO_STACK) return newStack.slice(-MAX_UNDO_STACK)
@@ -320,6 +330,9 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
 
     const scheduleIdleSave = () => {
       if (!onCanvasIdle) return
+      // Don't persist before a pending draft has been restored, or we'd clobber
+      // the saved draft with a blank/partial canvas. (null = no draft to wait for.)
+      if (initialImageBlob != null && !restoredRef.current) return
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
       idleTimerRef.current = setTimeout(() => {
         const canvas = canvasRef.current
@@ -356,9 +369,27 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       const container = containerRef.current
       const pts = twoPointers()
       if (!container || pts.length < 2) return
-      // Abort any in-progress stroke so the pinch doesn't leave a stray line.
+
+      // The first finger's pointerdown already ran a draw action before the
+      // second finger arrived. If it was only a lone dot (no movement yet),
+      // revert it and drop its undo entry so the pinch leaves no stray mark.
+      // If it was a real (moved) stroke, complete it properly instead.
+      if (lastPointRef.current !== null) {
+        const ctx = ctxRef.current
+        if (!strokeMovedRef.current && ctx && lastSnapshotRef.current) {
+          ctx.save()
+          ctx.setTransform(1, 0, 0, 1, 0, 0)
+          ctx.putImageData(lastSnapshotRef.current, 0, 0)
+          ctx.restore()
+          setUndoStack((prev) => prev.slice(0, -1))
+        } else {
+          onStrokeEnd?.()
+        }
+      }
       setIsDrawing(false)
       lastPointRef.current = null
+      strokeMovedRef.current = false
+
       const rect = container.getBoundingClientRect()
       const origin = { x: rect.left, y: rect.top }
       const centroid = mid(pts[0], pts[1])
@@ -460,14 +491,29 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         data[idx + 3] = 255
       }
 
+      const stack: number[] = []
+      // Returns true if neighbour n blocks the flood (non-matching) and so makes
+      // `pos` a boundary pixel; fills + enqueues it when it matches. Hoisted out
+      // of the loop so the hot per-pixel path allocates no closures.
+      const blockedBy = (n: number): boolean => {
+        if (filled[n]) return false
+        if (matches(n)) {
+          filled[n] = 1
+          paint(n)
+          stack.push(n)
+          return false
+        }
+        return true
+      }
+
       // Flood the contiguous same-color region (4-connected). Pixels are marked
       // `filled` at push time so each is processed once and the stack stays
-      // bounded. A pixel that touches a non-matching/blocked neighbour is a
+      // bounded. A pixel touching a non-matching/out-of-bounds neighbour is a
       // boundary pixel and seeds the dilation pass below.
       const start = py * width + px
       filled[start] = 1
       paint(start)
-      const stack: number[] = [start]
+      stack.push(start)
 
       while (stack.length > 0) {
         const pos = stack.pop()!
@@ -475,58 +521,52 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         const y = (pos - x) / width
         let isBoundary = false
 
-        const visit = (npos: number, inBounds: boolean) => {
-          if (!inBounds) {
-            isBoundary = true
-            return
-          }
-          if (filled[npos]) return
-          if (matches(npos)) {
-            filled[npos] = 1
-            paint(npos)
-            stack.push(npos)
-          } else {
-            isBoundary = true
-          }
-        }
-
-        visit(pos + 1, x + 1 < width)
-        visit(pos - 1, x - 1 >= 0)
-        visit(pos + width, y + 1 < height)
-        visit(pos - width, y - 1 >= 0)
+        if (x + 1 < width) { if (blockedBy(pos + 1)) isBoundary = true } else isBoundary = true
+        if (x - 1 >= 0) { if (blockedBy(pos - 1)) isBoundary = true } else isBoundary = true
+        if (y + 1 < height) { if (blockedBy(pos + width)) isBoundary = true } else isBoundary = true
+        if (y - 1 >= 0) { if (blockedBy(pos - width)) isBoundary = true } else isBoundary = true
 
         if (isBoundary) boundary.push(pos)
       }
 
       // Dilation: grow the filled region outward by ~1 CSS px (round(dpr) device
-      // px, 8-connected) into adjacent non-barrier pixels. This covers the 1-2px
-      // anti-aliased seam between the fill edge and the separate, multiply-blended
-      // contour overlay — the visible white/grey halo — without bleeding past the
-      // dark contour, since the template barrier still stops the growth.
-      const dilatePasses = Math.max(1, Math.round(dpr))
-      let frontier = boundary
-      for (let pass = 0; pass < dilatePasses && frontier.length > 0; pass++) {
-        const next: number[] = []
-        for (const pos of frontier) {
-          const x = pos % width
-          const y = (pos - x) / width
-          for (let dy = -1; dy <= 1; dy++) {
-            const ny = y + dy
-            if (ny < 0 || ny >= height) continue
-            for (let dx = -1; dx <= 1; dx++) {
-              if (dx === 0 && dy === 0) continue
-              const nx = x + dx
-              if (nx < 0 || nx >= width) continue
-              const npos = ny * width + nx
-              if (filled[npos]) continue
-              if (barrier && barrier[npos] === 1) continue
-              filled[npos] = 1
-              paint(npos)
-              next.push(npos)
-            }
+      // px) to cover the anti-aliased seam between the fill edge and the separate,
+      // multiply-blended contour overlay (the visible halo). Only runs when a
+      // template barrier exists — the barrier both bounds the growth at the dark
+      // contour AND is the only safe stop; in barrier-free (blank) mode there is
+      // no overlay halo and dilation would erode the kid's own strokes.
+      if (barrier) {
+        const isBarrier = (p: number) => barrier[p] === 1
+        const dilatePasses = Math.max(1, Math.round(dpr))
+        let frontier = boundary
+        for (let pass = 0; pass < dilatePasses && frontier.length > 0; pass++) {
+          const next: number[] = []
+          const grow = (np: number) => {
+            if (filled[np] || isBarrier(np)) return
+            filled[np] = 1
+            paint(np)
+            next.push(np)
           }
+          for (const pos of frontier) {
+            const x = pos % width
+            const y = (pos - x) / width
+            const right = x + 1 < width
+            const left = x - 1 >= 0
+            const down = y + 1 < height
+            const up = y - 1 >= 0
+            if (right) grow(pos + 1)
+            if (left) grow(pos - 1)
+            if (down) grow(pos + width)
+            if (up) grow(pos - width)
+            // Diagonals only when BOTH shared orthogonal cells are non-barrier,
+            // so growth can't squeeze across a 1px-thin diagonal contour.
+            if (right && down && !isBarrier(pos + 1) && !isBarrier(pos + width)) grow(pos + width + 1)
+            if (left && down && !isBarrier(pos - 1) && !isBarrier(pos + width)) grow(pos + width - 1)
+            if (right && up && !isBarrier(pos + 1) && !isBarrier(pos - width)) grow(pos - width + 1)
+            if (left && up && !isBarrier(pos - 1) && !isBarrier(pos - width)) grow(pos - width - 1)
+          }
+          frontier = next
         }
-        frontier = next
       }
 
       ctx.putImageData(imageData, 0, 0)
@@ -540,6 +580,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       const x = pos.x - stampSize / 2
       const y = pos.y - stampSize / 2
       ctx.drawImage(stampImg, x, y, stampSize, stampSize)
+      hasDrawnRef.current = true
       saveToUndoStack()
       onStampPlaced?.()
       scheduleIdleSave()
@@ -568,6 +609,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       }
 
       if (tool === 'fill') {
+        hasDrawnRef.current = true
         saveToUndoStack()
         floodFill(pos.x, pos.y, color)
         scheduleIdleSave()
@@ -577,6 +619,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
 
       saveToUndoStack()
       setIsDrawing(true)
+      strokeMovedRef.current = false
       lastPointRef.current = pos
 
       const size = effectiveBrushSize(e)
@@ -614,6 +657,8 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       const pos = getPointerPos(e)
       drawStroke(lastPointRef.current, pos)
       lastPointRef.current = pos
+      strokeMovedRef.current = true
+      hasDrawnRef.current = true
     }
 
     const handlePointerUp = (e: React.PointerEvent) => {
@@ -624,6 +669,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       if (isDrawing) {
         setIsDrawing(false)
         lastPointRef.current = null
+        hasDrawnRef.current = true
         scheduleIdleSave()
         onStrokeEnd?.()
       }
