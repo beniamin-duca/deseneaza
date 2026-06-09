@@ -8,6 +8,7 @@ import {
   forwardRef,
   useImperativeHandle,
 } from 'react'
+import { Minimize2 } from 'lucide-react'
 import type { Tool } from './floating-toolbar'
 
 interface Point {
@@ -100,6 +101,21 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     const [undoStack, setUndoStack] = useState<ImageData[]>([])
     const lastPointRef = useRef<Point | null>(null)
 
+    // Pinch-to-zoom. Zoom/pan are PURELY visual (CSS transform on the inner
+    // wrapper); the canvas backing store, dpr and barrier arrays stay untouched.
+    const [zoom, setZoom] = useState(1)
+    const [pan, setPan] = useState<Point>({ x: 0, y: 0 })
+    const frameRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 })
+    const pointersRef = useRef<Map<number, Point>>(new Map())
+    const gestureRef = useRef<{
+      startDist: number
+      startZoom: number
+      origin: Point
+      anchor: Point
+    } | null>(null)
+    const zoomPillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const [showZoomPill, setShowZoomPill] = useState(false)
+
     const getTemplateRect = (
       imgW: number,
       imgH: number,
@@ -151,6 +167,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         const rect = container.getBoundingClientRect()
         const dpr = window.devicePixelRatio || 1
         dprRef.current = dpr
+        frameRef.current = { w: rect.width, h: rect.height }
 
         const ctx = canvas.getContext('2d', { willReadFrequently: true })
         let imageData: ImageData | null = null
@@ -250,8 +267,10 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       const img = new Image()
       const url = URL.createObjectURL(initialImageBlob)
       img.onload = () => {
-        const rect = canvas.getBoundingClientRect()
-        ctx.drawImage(img, 0, 0, rect.width, rect.height)
+        // Use the logical frame size, not canvas.getBoundingClientRect(), which
+        // would be scaled if a pinch-zoom transform is active.
+        const { w, h } = frameRef.current
+        ctx.drawImage(img, 0, 0, w, h)
         URL.revokeObjectURL(url)
         restoredRef.current = true
       }
@@ -261,6 +280,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     useEffect(() => {
       return () => {
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+        if (zoomPillTimerRef.current) clearTimeout(zoomPillTimerRef.current)
       }
     }, [])
 
@@ -279,8 +299,15 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     const getPointerPos = (e: React.PointerEvent): Point => {
       const canvas = canvasRef.current
       if (!canvas) return { x: 0, y: 0 }
+      // getBoundingClientRect() already reflects the pinch-zoom CSS transform
+      // (translate absorbed into rect.left, scale into rect size), so dividing
+      // by zoom recovers logical canvas pixels. No dpr math here — floodFill and
+      // strokes apply dpr themselves on this logical coordinate.
       const rect = canvas.getBoundingClientRect()
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      return {
+        x: (e.clientX - rect.left) / zoom,
+        y: (e.clientY - rect.top) / zoom,
+      }
     }
 
     const effectiveBrushSize = (e: React.PointerEvent): number => {
@@ -310,6 +337,71 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       ctx.moveTo(from.x, from.y)
       ctx.lineTo(to.x, to.y)
       ctx.stroke()
+    }
+
+    const flashZoomPill = () => {
+      setShowZoomPill(true)
+      if (zoomPillTimerRef.current) clearTimeout(zoomPillTimerRef.current)
+      zoomPillTimerRef.current = setTimeout(() => setShowZoomPill(false), 1600)
+    }
+
+    const twoPointers = () => Array.from(pointersRef.current.values())
+    const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
+    const mid = (a: Point, b: Point) => ({
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2,
+    })
+
+    const beginPinch = () => {
+      const container = containerRef.current
+      const pts = twoPointers()
+      if (!container || pts.length < 2) return
+      // Abort any in-progress stroke so the pinch doesn't leave a stray line.
+      setIsDrawing(false)
+      lastPointRef.current = null
+      const rect = container.getBoundingClientRect()
+      const origin = { x: rect.left, y: rect.top }
+      const centroid = mid(pts[0], pts[1])
+      // Wrapper-local point currently under the centroid (transformOrigin 0 0):
+      // screen = origin + pan + local * zoom  =>  local = (screen - origin - pan) / zoom
+      const anchor = {
+        x: (centroid.x - origin.x - pan.x) / zoom,
+        y: (centroid.y - origin.y - pan.y) / zoom,
+      }
+      gestureRef.current = {
+        startDist: dist(pts[0], pts[1]),
+        startZoom: zoom,
+        origin,
+        anchor,
+      }
+    }
+
+    const updatePinch = () => {
+      const g = gestureRef.current
+      const pts = twoPointers()
+      const frame = frameRef.current
+      if (!g || pts.length < 2 || g.startDist === 0) return
+      const curDist = dist(pts[0], pts[1])
+      const centroid = mid(pts[0], pts[1])
+      const nextZoom = Math.max(1, Math.min(4, g.startZoom * (curDist / g.startDist)))
+      // Keep the anchored local point under the moving centroid.
+      let nx = centroid.x - g.origin.x - g.anchor.x * nextZoom
+      let ny = centroid.y - g.origin.y - g.anchor.y * nextZoom
+      // Clamp so the scaled wrapper always covers the frame (no empty gaps).
+      const minX = frame.w * (1 - nextZoom)
+      const minY = frame.h * (1 - nextZoom)
+      nx = Math.min(0, Math.max(minX, nx))
+      ny = Math.min(0, Math.max(minY, ny))
+      setZoom(nextZoom)
+      setPan(nextZoom === 1 ? { x: 0, y: 0 } : { x: nx, y: ny })
+      flashZoomPill()
+    }
+
+    const resetZoom = () => {
+      gestureRef.current = null
+      setZoom(1)
+      setPan({ x: 0, y: 0 })
+      setShowZoomPill(false)
     }
 
     const floodFill = (startX: number, startY: number, fillColor: string) => {
@@ -455,6 +547,14 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     }
 
     const handlePointerDown = (e: React.PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        if (pointersRef.current.size === 2) {
+          beginPinch()
+          return
+        }
+        if (pointersRef.current.size > 2) return
+      }
       if (disabled) return
       e.preventDefault()
       onStrokeStart?.()
@@ -495,6 +595,14 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     }
 
     const handlePointerMove = (e: React.PointerEvent) => {
+      if (e.pointerType === 'touch' && pointersRef.current.has(e.pointerId)) {
+        pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      }
+      if (pointersRef.current.size >= 2) {
+        e.preventDefault()
+        updatePinch()
+        return
+      }
       if (disabled || !isDrawing || !lastPointRef.current) return
       e.preventDefault()
       const ctx = ctxRef.current
@@ -508,7 +616,11 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       lastPointRef.current = pos
     }
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (e: React.PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        pointersRef.current.delete(e.pointerId)
+        if (pointersRef.current.size < 2) gestureRef.current = null
+      }
       if (isDrawing) {
         setIsDrawing(false)
         lastPointRef.current = null
@@ -540,10 +652,11 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         const canvas = canvasRef.current
         if (!ctx || !canvas) return
         saveToUndoStack()
-        const rect = canvas.getBoundingClientRect()
+        const { w, h } = frameRef.current
         ctx.fillStyle = '#FFFFFF'
-        ctx.fillRect(0, 0, rect.width, rect.height)
+        ctx.fillRect(0, 0, w, h)
         scheduleIdleSave()
+        resetZoom()
       },
       canUndo: () => undoStack.length > 0,
       getImageDataUrl: () => {
@@ -582,25 +695,56 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         ref={containerRef}
         className="flex-1 w-full bg-white touch-canvas overflow-hidden relative"
       >
-        <canvas
-          ref={canvasRef}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          className="w-full h-full block"
-          style={{ touchAction: 'none', cursor: cursorStyle }}
-        />
-        {templateSrc && (
-          <img
-            src={templateSrc}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
-            style={{ mixBlendMode: 'multiply' }}
-            draggable={false}
+        {/* Inner transform layer: pinch-zoom scales the canvas AND the template
+            overlay together. The container above stays unscaled so the
+            ResizeObserver keeps reading the true frame size. */}
+        <div
+          className="absolute inset-0"
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: '0 0',
+            willChange: 'transform',
+          }}
+        >
+          <canvas
+            ref={canvasRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            className="w-full h-full block"
+            style={{ touchAction: 'none', cursor: cursorStyle }}
           />
+          {templateSrc && (
+            <img
+              src={templateSrc}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+              style={{ mixBlendMode: 'multiply' }}
+              draggable={false}
+            />
+          )}
+        </div>
+
+        {zoom > 1 && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+            <span
+              className="px-2.5 py-1 rounded-full bg-foreground/80 text-background text-xs font-display shadow transition-transform duration-200"
+              style={{ transform: showZoomPill ? 'scale(1.12)' : 'scale(1)' }}
+            >
+              {zoom.toFixed(1)}x
+            </span>
+            <button
+              onClick={resetZoom}
+              className="w-8 h-8 rounded-full bg-white shadow flex items-center justify-center text-foreground/70 hover:text-foreground"
+              aria-label="Reseteaza zoom"
+              title="Reseteaza zoom"
+            >
+              <Minimize2 className="w-4 h-4" />
+            </button>
+          </div>
         )}
       </div>
     )
