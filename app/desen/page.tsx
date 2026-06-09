@@ -9,7 +9,7 @@ import { TemplateSidebar } from '@/components/template-sidebar'
 import { StampSidebar } from '@/components/stamp-sidebar'
 import { KidCanvas, type KidCanvasRef } from '@/components/kid-canvas'
 import { SaveShareSheet } from '@/components/save-share-sheet'
-import { type Template, type Stamp } from '@/lib/templates'
+import { TEMPLATES, type Template, type Stamp } from '@/lib/templates'
 import { saveDraft, loadDraft, clearDraft } from '@/lib/progress'
 import { useCustomColors } from '@/lib/use-custom-colors'
 import {
@@ -34,6 +34,29 @@ function isDrawMode(value: string | null): value is DrawMode {
   return value === 'blank' || value === 'colorat'
 }
 
+// Which template the kid was last colouring, so a restored colorat draft shows
+// its outline again. Device-only, tiny — localStorage, SSR-guarded.
+const COLORAT_TEMPLATE_KEY = 'riza:draft-colorat-template'
+
+function readColoratTemplate(): Template | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const id = window.localStorage.getItem(COLORAT_TEMPLATE_KEY)
+    return id ? TEMPLATES.find((t) => t.id === id) ?? null : null
+  } catch {
+    return null
+  }
+}
+
+function writeColoratTemplate(id: string) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(COLORAT_TEMPLATE_KEY, id)
+  } catch {
+    // ignore
+  }
+}
+
 function DrawingPageContent() {
   const searchParams = useSearchParams()
   const modeParam = searchParams.get('mode')
@@ -54,25 +77,25 @@ function DrawingPageContent() {
   const [showTemplateSidebar, setShowTemplateSidebar] = useState(false)
   const [showStampSidebar, setShowStampSidebar] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
-  // Free-draw persistence (device-only IndexedDB draft). v1: 'blank' mode only —
-  // 'colorat' depends on a re-selectable template whose async load would race the
-  // restore, so it stays unpersisted for now.
-  const persistDraft = mode === 'blank'
+  // Device-only IndexedDB draft persistence for both modes. For 'colorat' the
+  // chosen template id is also persisted (localStorage) and restored so the
+  // outline reappears; the canvas re-applies the draft over the template's
+  // white-fill regardless of which image loads first.
   const [initialBlob, setInitialBlob] = useState<Blob | null | undefined>(
     undefined
   )
 
   useEffect(() => {
-    if (mode === 'colorat') {
+    if (mode !== 'colorat') return
+    const restored = readColoratTemplate()
+    if (restored) {
+      setSelectedTemplate(restored)
+    } else {
       setShowTemplateSidebar(true)
     }
   }, [mode])
 
   useEffect(() => {
-    if (!persistDraft) {
-      setInitialBlob(null)
-      return
-    }
     let cancelled = false
     loadDraft(mode).then((blob) => {
       if (!cancelled) setInitialBlob(blob)
@@ -80,7 +103,7 @@ function DrawingPageContent() {
     return () => {
       cancelled = true
     }
-  }, [mode, persistDraft])
+  }, [mode])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -113,7 +136,7 @@ function DrawingPageContent() {
   const handleClear = () => setShowClearConfirm(true)
   const handleConfirmClear = () => {
     canvasRef.current?.clear()
-    if (persistDraft) clearDraft(mode).catch(() => {})
+    clearDraft(mode).catch(() => {})
     setShowClearConfirm(false)
   }
   const handleSave = () => {
@@ -149,6 +172,8 @@ function DrawingPageContent() {
   const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template)
     setShowTemplateSidebar(false)
+    writeColoratTemplate(template.id)
+    clearDraft('colorat').catch(() => {})
     canvasRef.current?.clear()
   }
 
@@ -174,14 +199,10 @@ function DrawingPageContent() {
         stampSrc={stampSrc}
         onStampPlaced={() => {}}
         disabled={canvasDisabled}
-        initialImageBlob={persistDraft ? initialBlob : null}
-        onCanvasIdle={
-          persistDraft
-            ? (blob) => {
-                saveDraft(mode, blob).catch(() => {})
-              }
-            : undefined
-        }
+        initialImageBlob={initialBlob}
+        onCanvasIdle={(blob) => {
+          saveDraft(mode, blob).catch(() => {})
+        }}
         onStrokeStart={handleStrokeStart}
         onStrokeEnd={handleStrokeEnd}
       />

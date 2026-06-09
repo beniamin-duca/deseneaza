@@ -97,6 +97,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     const stampImageRef = useRef<HTMLImageElement | null>(null)
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const restoredRef = useRef(false)
+    const restoreImgRef = useRef<HTMLImageElement | null>(null)
     const [isDrawing, setIsDrawing] = useState(false)
     const [undoStack, setUndoStack] = useState<ImageData[]>([])
     const lastPointRef = useRef<Point | null>(null)
@@ -224,11 +225,10 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         templateImgRef.current = null
         templateBarrierRef.current = null
         const ctx = ctxRef.current
-        const canvas = canvasRef.current
-        if (ctx && canvas) {
-          const rect = canvas.getBoundingClientRect()
+        if (ctx) {
+          const { w, h } = frameRef.current
           ctx.fillStyle = '#FFFFFF'
-          ctx.fillRect(0, 0, rect.width, rect.height)
+          ctx.fillRect(0, 0, w, h)
           setUndoStack([])
         }
         return
@@ -240,12 +240,17 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         templateImgRef.current = img
         buildTemplateBarrier()
         const ctx = ctxRef.current
-        const canvas = canvasRef.current
-        if (ctx && canvas) {
-          const rect = canvas.getBoundingClientRect()
+        if (ctx) {
+          const { w, h } = frameRef.current
           ctx.fillStyle = '#FFFFFF'
-          ctx.fillRect(0, 0, rect.width, rect.height)
+          ctx.fillRect(0, 0, w, h)
           setUndoStack([])
+          // The template image and the draft restore load independently. If a
+          // draft is being restored for this template, re-apply it over the
+          // fresh white fill so the result is the same whichever loads last.
+          if (restoreImgRef.current && !hasDrawnRef.current) {
+            ctx.drawImage(restoreImgRef.current, 0, 0, w, h)
+          }
         }
       }
       img.src = templateSrc
@@ -274,7 +279,13 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       const url = URL.createObjectURL(initialImageBlob)
       img.onload = () => {
         URL.revokeObjectURL(url)
+        // If the canvas was cleared / a new template chosen while this was
+        // loading, the restore is stale — drop it.
+        if (restoredRef.current) return
         restoredRef.current = true
+        // Keep the decoded draft so the template effect can re-apply it if its
+        // image loads after this one (colorat mode).
+        restoreImgRef.current = img
         // If the kid already started drawing during the (doubly async) load,
         // don't paint the old opaque draft over their fresh work.
         if (hasDrawnRef.current) return
@@ -701,6 +712,11 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         const { w, h } = frameRef.current
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(0, 0, w, h)
+        // Clearing is a fresh start: drop any pending/loaded draft restore so a
+        // subsequent template load can't re-apply a stale draft over the blank.
+        restoredRef.current = true
+        restoreImgRef.current = null
+        hasDrawnRef.current = false
         scheduleIdleSave()
         resetZoom()
       },
