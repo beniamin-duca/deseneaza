@@ -214,8 +214,8 @@ function SideRail({
   onRequestCustom,
 }: DockProps) {
   return (
-    <div className="hidden md:flex fixed right-4 top-1/2 -translate-y-1/2 z-30 max-h-[calc(100vh-2rem)]">
-      <div className="floating-toolbar px-2 py-3 pop-in flex flex-col items-center gap-2 max-h-[calc(100vh-2rem)] overflow-y-auto">
+    <div className="hidden md:flex items-center fixed right-4 top-20 bottom-4 z-30">
+      <div className="floating-toolbar px-2 py-3 pop-in flex flex-col items-center gap-2 max-h-full overflow-y-auto">
         {showTemplateButton && onShowTemplates && (
           <>
             <button
