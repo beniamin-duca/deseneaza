@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { BRUSH_SIZES } from '@/lib/templates'
 import {
   Paintbrush,
   Eraser,
@@ -14,7 +13,6 @@ import {
   Stamp,
 } from 'lucide-react'
 import { ColorPopover } from './color-popover'
-import { ColorPalette } from './color-palette'
 import { CustomColorDialog } from './custom-color-dialog'
 import { SizePopover } from './size-popover'
 
@@ -284,42 +282,19 @@ function SideRail({
 
         <div className="h-px w-8 bg-border my-1" />
 
-        <ColorPalette
+        <ColorPopover
           activeColor={activeColor}
           onColorChange={onColorChange}
           customColors={customColors}
           onRemoveCustom={onRemoveCustom}
           onRequestCustom={onRequestCustom}
-          variant="rail"
+          side="left"
         />
-
-        <div className="h-px w-8 bg-border my-1" />
-
-        <div className="flex flex-col items-center gap-1.5">
-          {BRUSH_SIZES.map((size) => {
-            const dot = Math.max(6, size.value * 0.45)
-            return (
-              <button
-                key={size.id}
-                onClick={() => onBrushSizeChange(size.value)}
-                className={cn(
-                  'flex items-center justify-center rounded-full transition-all duration-200',
-                  brushSize === size.value
-                    ? 'bg-foreground text-background'
-                    : 'bg-muted/50 hover:bg-muted text-muted-foreground'
-                )}
-                style={{ width: 40, height: 40 }}
-                aria-label={size.name}
-                title={size.name}
-              >
-                <span
-                  className="rounded-full bg-current"
-                  style={{ width: dot, height: dot }}
-                />
-              </button>
-            )
-          })}
-        </div>
+        <SizePopover
+          brushSize={brushSize}
+          onBrushSizeChange={onBrushSizeChange}
+          side="left"
+        />
 
         <div className="h-px w-8 bg-border my-1" />
 
