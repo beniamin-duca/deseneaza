@@ -5,9 +5,29 @@ import { useEffect, useState } from 'react'
 export type FeedbackCategory = 'fill' | 'stamp' | 'complete'
 
 const SOUND_FILES: Record<FeedbackCategory, string[]> = {
-  fill: ['/sounds/fill-1.mp3', '/sounds/fill-2.mp3', '/sounds/fill-3.mp3'],
-  stamp: ['/sounds/stamp-1.mp3', '/sounds/stamp-2.mp3', '/sounds/stamp-3.mp3'],
-  complete: ['/sounds/complete-1.mp3'],
+  fill: [
+    '/sounds/fill-1.mp3',
+    '/sounds/fill-2.mp3',
+    '/sounds/fill-3.mp3',
+    '/sounds/fill-4.mp3',
+    '/sounds/fill-5.mp3',
+    '/sounds/fill-6.mp3',
+    '/sounds/fill-7.mp3',
+    '/sounds/fill-8.mp3',
+  ],
+  stamp: [
+    '/sounds/stamp-1.mp3',
+    '/sounds/stamp-2.mp3',
+    '/sounds/stamp-3.mp3',
+    '/sounds/stamp-4.mp3',
+    '/sounds/stamp-5.mp3',
+    '/sounds/stamp-6.mp3',
+  ],
+  complete: [
+    '/sounds/complete-1.mp3',
+    '/sounds/complete-2.mp3',
+    '/sounds/complete-3.mp3',
+  ],
 }
 
 const VIBRATE_PATTERNS: Record<FeedbackCategory, number | number[]> = {
