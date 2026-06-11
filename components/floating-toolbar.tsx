@@ -1,7 +1,7 @@
 'use client'
 
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { DRAWING_COLORS, BRUSH_SIZES } from '@/lib/templates'
 import {
   Paintbrush,
   Eraser,
@@ -13,6 +13,7 @@ import {
   Stamp,
 } from 'lucide-react'
 import { ColorPopover } from './color-popover'
+import { CustomColorDialog } from './custom-color-dialog'
 import { SizePopover } from './size-popover'
 
 export type Tool = 'brush' | 'eraser' | 'fill' | 'stamp'
@@ -32,7 +33,12 @@ interface FloatingToolbarProps {
   canUndo: boolean
   showTemplateButton?: boolean
   hidden?: boolean
+  customColors: string[]
+  onAddCustom: (hex: string) => void
+  onRemoveCustom: (hex: string) => void
 }
+
+type DockProps = FloatingToolbarProps & { onRequestCustom: () => void }
 
 const TOOLS = [
   { id: 'brush' as Tool, icon: Paintbrush, label: 'Pensula' },
@@ -41,10 +47,21 @@ const TOOLS = [
 ]
 
 export function FloatingToolbar(props: FloatingToolbarProps) {
+  const [customOpen, setCustomOpen] = useState(false)
+  const requestCustom = () => setCustomOpen(true)
   return (
     <>
-      <BottomDock {...props} />
-      <SideRail {...props} />
+      <BottomDock {...props} onRequestCustom={requestCustom} />
+      <SideRail {...props} onRequestCustom={requestCustom} />
+      <CustomColorDialog
+        open={customOpen}
+        onOpenChange={setCustomOpen}
+        initialColor={props.activeColor}
+        onConfirm={(hex) => {
+          props.onColorChange(hex)
+          props.onAddCustom(hex)
+        }}
+      />
     </>
   )
 }
@@ -64,7 +81,10 @@ function BottomDock({
   canUndo,
   showTemplateButton,
   hidden,
-}: FloatingToolbarProps) {
+  customColors,
+  onRemoveCustom,
+  onRequestCustom,
+}: DockProps) {
   return (
     <div
       className={cn(
@@ -122,11 +142,29 @@ function BottomDock({
             </button>
           )}
 
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className={cn(
+              'tool-btn tool-btn--labeled',
+              canUndo
+                ? 'bg-muted/50 hover:bg-muted'
+                : 'bg-muted/30 text-muted-foreground/50 cursor-not-allowed'
+            )}
+            aria-label="Inapoi"
+          >
+            <Undo2 className="w-6 h-6" />
+            <span className="font-display text-[10px] leading-none">Inapoi</span>
+          </button>
+
           <div className="w-px h-8 bg-border" />
 
           <ColorPopover
             activeColor={activeColor}
             onColorChange={onColorChange}
+            customColors={customColors}
+            onRemoveCustom={onRemoveCustom}
+            onRequestCustom={onRequestCustom}
             side="top"
           />
           <SizePopover
@@ -137,19 +175,6 @@ function BottomDock({
 
           <div className="w-px h-8 bg-border" />
 
-          <button
-            onClick={onUndo}
-            disabled={!canUndo}
-            className={cn(
-              'tool-btn',
-              canUndo
-                ? 'bg-muted/50 hover:bg-muted'
-                : 'bg-muted/30 text-muted-foreground/50 cursor-not-allowed'
-            )}
-            aria-label="Inapoi"
-          >
-            <Undo2 className="w-6 h-6" />
-          </button>
           <button
             onClick={onClear}
             className="tool-btn bg-coral/10 hover:bg-coral/20 text-coral-dark"
@@ -184,10 +209,13 @@ function SideRail({
   onShowStamps,
   canUndo,
   showTemplateButton,
-}: FloatingToolbarProps) {
+  customColors,
+  onRemoveCustom,
+  onRequestCustom,
+}: DockProps) {
   return (
-    <div className="hidden md:flex fixed right-4 top-1/2 -translate-y-1/2 z-30 max-h-[calc(100vh-2rem)]">
-      <div className="floating-toolbar px-2 py-3 pop-in flex flex-col items-center gap-2 max-h-[calc(100vh-2rem)] overflow-y-auto">
+    <div className="hidden md:flex items-center fixed right-4 top-20 bottom-4 z-30">
+      <div className="floating-toolbar px-2 py-3 pop-in flex flex-col items-center gap-2 max-h-full overflow-y-auto">
         {showTemplateButton && onShowTemplates && (
           <>
             <button
@@ -236,59 +264,11 @@ function SideRail({
           </button>
         )}
 
-        <div className="h-px w-8 bg-border my-1" />
-
-        <div className="grid grid-cols-2 gap-2">
-          {DRAWING_COLORS.map((color) => (
-            <button
-              key={color.id}
-              onClick={() => onColorChange(color.value)}
-              className={cn(
-                'color-swatch',
-                activeColor === color.value && 'active'
-              )}
-              style={{ backgroundColor: color.value, width: 40, height: 40 }}
-              aria-label={color.name}
-              title={color.name}
-            />
-          ))}
-        </div>
-
-        <div className="h-px w-8 bg-border my-1" />
-
-        <div className="flex flex-col items-center gap-1.5">
-          {BRUSH_SIZES.map((size) => {
-            const dot = Math.max(6, size.value * 0.45)
-            return (
-              <button
-                key={size.id}
-                onClick={() => onBrushSizeChange(size.value)}
-                className={cn(
-                  'flex items-center justify-center rounded-full transition-all duration-200',
-                  brushSize === size.value
-                    ? 'bg-foreground text-background'
-                    : 'bg-muted/50 hover:bg-muted text-muted-foreground'
-                )}
-                style={{ width: 40, height: 40 }}
-                aria-label={size.name}
-                title={size.name}
-              >
-                <span
-                  className="rounded-full bg-current"
-                  style={{ width: dot, height: dot }}
-                />
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="h-px w-8 bg-border my-1" />
-
         <button
           onClick={onUndo}
           disabled={!canUndo}
           className={cn(
-            'tool-btn',
+            'tool-btn tool-btn--labeled',
             canUndo
               ? 'bg-muted/50 hover:bg-muted'
               : 'bg-muted/30 text-muted-foreground/50 cursor-not-allowed'
@@ -297,7 +277,27 @@ function SideRail({
           title="Inapoi"
         >
           <Undo2 className="w-6 h-6" />
+          <span className="font-display text-[10px] leading-none">Inapoi</span>
         </button>
+
+        <div className="h-px w-8 bg-border my-1" />
+
+        <ColorPopover
+          activeColor={activeColor}
+          onColorChange={onColorChange}
+          customColors={customColors}
+          onRemoveCustom={onRemoveCustom}
+          onRequestCustom={onRequestCustom}
+          side="left"
+        />
+        <SizePopover
+          brushSize={brushSize}
+          onBrushSizeChange={onBrushSizeChange}
+          side="left"
+        />
+
+        <div className="h-px w-8 bg-border my-1" />
+
         <button
           onClick={onClear}
           className="tool-btn bg-coral/10 hover:bg-coral/20 text-coral-dark"

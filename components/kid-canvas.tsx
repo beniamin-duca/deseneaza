@@ -8,6 +8,7 @@ import {
   forwardRef,
   useImperativeHandle,
 } from 'react'
+import { Minimize2 } from 'lucide-react'
 import type { Tool } from './floating-toolbar'
 
 interface Point {
@@ -22,9 +23,16 @@ interface KidCanvasProps {
   templateSrc?: string | null
   stampSrc?: string | null
   onStampPlaced?: () => void
+  onCelebrate?: (
+    type: 'fill' | 'stamp',
+    clientX: number,
+    clientY: number
+  ) => void
   disabled?: boolean
   initialImageBlob?: Blob | null
   onCanvasIdle?: (blob: Blob) => void
+  onStrokeStart?: () => void
+  onStrokeEnd?: () => void
 }
 
 export interface KidCanvasRef {
@@ -36,6 +44,8 @@ export interface KidCanvasRef {
 
 const MAX_UNDO_STACK = 20
 const TEMPLATE_BARRIER_THRESHOLD = 80
+// How close (per RGB channel) a pixel must be to the seed color to be flooded.
+const FILL_TOLERANCE = 32
 
 // Inline SVG cursors per tool. Hotspot is the natural "active tip"
 // of each tool. Brush + fill use the active color so the kid sees
@@ -75,9 +85,12 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       templateSrc,
       stampSrc,
       onStampPlaced,
+      onCelebrate,
       disabled = false,
       initialImageBlob,
       onCanvasIdle,
+      onStrokeStart,
+      onStrokeEnd,
     },
     ref
   ) {
@@ -90,9 +103,31 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     const stampImageRef = useRef<HTMLImageElement | null>(null)
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const restoredRef = useRef(false)
+    const restoreImgRef = useRef<HTMLImageElement | null>(null)
     const [isDrawing, setIsDrawing] = useState(false)
     const [undoStack, setUndoStack] = useState<ImageData[]>([])
     const lastPointRef = useRef<Point | null>(null)
+    // Whether the current stroke has moved (vs. a lone dot), the pre-action
+    // snapshot for reverting a dot when a pinch starts, and whether the kid has
+    // drawn anything yet (so a late async draft-restore can't clobber real work).
+    const strokeMovedRef = useRef(false)
+    const lastSnapshotRef = useRef<ImageData | null>(null)
+    const hasDrawnRef = useRef(false)
+
+    // Pinch-to-zoom. Zoom/pan are PURELY visual (CSS transform on the inner
+    // wrapper); the canvas backing store, dpr and barrier arrays stay untouched.
+    const [zoom, setZoom] = useState(1)
+    const [pan, setPan] = useState<Point>({ x: 0, y: 0 })
+    const frameRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 })
+    const pointersRef = useRef<Map<number, Point>>(new Map())
+    const gestureRef = useRef<{
+      startDist: number
+      startZoom: number
+      origin: Point
+      anchor: Point
+    } | null>(null)
+    const zoomPillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const [showZoomPill, setShowZoomPill] = useState(false)
 
     const getTemplateRect = (
       imgW: number,
@@ -145,6 +180,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         const rect = container.getBoundingClientRect()
         const dpr = window.devicePixelRatio || 1
         dprRef.current = dpr
+        frameRef.current = { w: rect.width, h: rect.height }
 
         const ctx = canvas.getContext('2d', { willReadFrequently: true })
         let imageData: ImageData | null = null
@@ -195,11 +231,10 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         templateImgRef.current = null
         templateBarrierRef.current = null
         const ctx = ctxRef.current
-        const canvas = canvasRef.current
-        if (ctx && canvas) {
-          const rect = canvas.getBoundingClientRect()
+        if (ctx) {
+          const { w, h } = frameRef.current
           ctx.fillStyle = '#FFFFFF'
-          ctx.fillRect(0, 0, rect.width, rect.height)
+          ctx.fillRect(0, 0, w, h)
           setUndoStack([])
         }
         return
@@ -211,12 +246,17 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         templateImgRef.current = img
         buildTemplateBarrier()
         const ctx = ctxRef.current
-        const canvas = canvasRef.current
-        if (ctx && canvas) {
-          const rect = canvas.getBoundingClientRect()
+        if (ctx) {
+          const { w, h } = frameRef.current
           ctx.fillStyle = '#FFFFFF'
-          ctx.fillRect(0, 0, rect.width, rect.height)
+          ctx.fillRect(0, 0, w, h)
           setUndoStack([])
+          // The template image and the draft restore load independently. If a
+          // draft is being restored for this template, re-apply it over the
+          // fresh white fill so the result is the same whichever loads last.
+          if (restoreImgRef.current && !hasDrawnRef.current) {
+            ctx.drawImage(restoreImgRef.current, 0, 0, w, h)
+          }
         }
       }
       img.src = templateSrc
@@ -244,10 +284,21 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       const img = new Image()
       const url = URL.createObjectURL(initialImageBlob)
       img.onload = () => {
-        const rect = canvas.getBoundingClientRect()
-        ctx.drawImage(img, 0, 0, rect.width, rect.height)
         URL.revokeObjectURL(url)
+        // If the canvas was cleared / a new template chosen while this was
+        // loading, the restore is stale — drop it.
+        if (restoredRef.current) return
         restoredRef.current = true
+        // Keep the decoded draft so the template effect can re-apply it if its
+        // image loads after this one (colorat mode).
+        restoreImgRef.current = img
+        // If the kid already started drawing during the (doubly async) load,
+        // don't paint the old opaque draft over their fresh work.
+        if (hasDrawnRef.current) return
+        // Use the logical frame size, not canvas.getBoundingClientRect(), which
+        // would be scaled if a pinch-zoom transform is active.
+        const { w, h } = frameRef.current
+        ctx.drawImage(img, 0, 0, w, h)
       }
       img.src = url
     }, [initialImageBlob])
@@ -255,6 +306,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     useEffect(() => {
       return () => {
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+        if (zoomPillTimerRef.current) clearTimeout(zoomPillTimerRef.current)
       }
     }, [])
 
@@ -263,6 +315,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       const ctx = ctxRef.current
       if (!canvas || !ctx) return
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      lastSnapshotRef.current = imageData
       setUndoStack((prev) => {
         const newStack = [...prev, imageData]
         if (newStack.length > MAX_UNDO_STACK) return newStack.slice(-MAX_UNDO_STACK)
@@ -273,8 +326,15 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     const getPointerPos = (e: React.PointerEvent): Point => {
       const canvas = canvasRef.current
       if (!canvas) return { x: 0, y: 0 }
+      // getBoundingClientRect() already reflects the pinch-zoom CSS transform
+      // (translate absorbed into rect.left, scale into rect size), so dividing
+      // by zoom recovers logical canvas pixels. No dpr math here — floodFill and
+      // strokes apply dpr themselves on this logical coordinate.
       const rect = canvas.getBoundingClientRect()
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      return {
+        x: (e.clientX - rect.left) / zoom,
+        y: (e.clientY - rect.top) / zoom,
+      }
     }
 
     const effectiveBrushSize = (e: React.PointerEvent): number => {
@@ -287,6 +347,9 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
 
     const scheduleIdleSave = () => {
       if (!onCanvasIdle) return
+      // Don't persist before a pending draft has been restored, or we'd clobber
+      // the saved draft with a blank/partial canvas. (null = no draft to wait for.)
+      if (initialImageBlob != null && !restoredRef.current) return
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
       idleTimerRef.current = setTimeout(() => {
         const canvas = canvasRef.current
@@ -304,6 +367,89 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       ctx.moveTo(from.x, from.y)
       ctx.lineTo(to.x, to.y)
       ctx.stroke()
+    }
+
+    const flashZoomPill = () => {
+      setShowZoomPill(true)
+      if (zoomPillTimerRef.current) clearTimeout(zoomPillTimerRef.current)
+      zoomPillTimerRef.current = setTimeout(() => setShowZoomPill(false), 1600)
+    }
+
+    const twoPointers = () => Array.from(pointersRef.current.values())
+    const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
+    const mid = (a: Point, b: Point) => ({
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2,
+    })
+
+    const beginPinch = () => {
+      const container = containerRef.current
+      const pts = twoPointers()
+      if (!container || pts.length < 2) return
+
+      // The first finger's pointerdown already ran a draw action before the
+      // second finger arrived. If it was only a lone dot (no movement yet),
+      // revert it and drop its undo entry so the pinch leaves no stray mark.
+      // If it was a real (moved) stroke, complete it properly instead.
+      if (lastPointRef.current !== null) {
+        const ctx = ctxRef.current
+        if (!strokeMovedRef.current && ctx && lastSnapshotRef.current) {
+          ctx.save()
+          ctx.setTransform(1, 0, 0, 1, 0, 0)
+          ctx.putImageData(lastSnapshotRef.current, 0, 0)
+          ctx.restore()
+          setUndoStack((prev) => prev.slice(0, -1))
+        } else {
+          onStrokeEnd?.()
+        }
+      }
+      setIsDrawing(false)
+      lastPointRef.current = null
+      strokeMovedRef.current = false
+
+      const rect = container.getBoundingClientRect()
+      const origin = { x: rect.left, y: rect.top }
+      const centroid = mid(pts[0], pts[1])
+      // Wrapper-local point currently under the centroid (transformOrigin 0 0):
+      // screen = origin + pan + local * zoom  =>  local = (screen - origin - pan) / zoom
+      const anchor = {
+        x: (centroid.x - origin.x - pan.x) / zoom,
+        y: (centroid.y - origin.y - pan.y) / zoom,
+      }
+      gestureRef.current = {
+        startDist: dist(pts[0], pts[1]),
+        startZoom: zoom,
+        origin,
+        anchor,
+      }
+    }
+
+    const updatePinch = () => {
+      const g = gestureRef.current
+      const pts = twoPointers()
+      const frame = frameRef.current
+      if (!g || pts.length < 2 || g.startDist === 0) return
+      const curDist = dist(pts[0], pts[1])
+      const centroid = mid(pts[0], pts[1])
+      const nextZoom = Math.max(1, Math.min(4, g.startZoom * (curDist / g.startDist)))
+      // Keep the anchored local point under the moving centroid.
+      let nx = centroid.x - g.origin.x - g.anchor.x * nextZoom
+      let ny = centroid.y - g.origin.y - g.anchor.y * nextZoom
+      // Clamp so the scaled wrapper always covers the frame (no empty gaps).
+      const minX = frame.w * (1 - nextZoom)
+      const minY = frame.h * (1 - nextZoom)
+      nx = Math.min(0, Math.max(minX, nx))
+      ny = Math.min(0, Math.max(minY, ny))
+      setZoom(nextZoom)
+      setPan(nextZoom === 1 ? { x: 0, y: 0 } : { x: nx, y: ny })
+      flashZoomPill()
+    }
+
+    const resetZoom = () => {
+      gestureRef.current = null
+      setZoom(1)
+      setPan({ x: 0, y: 0 })
+      setShowZoomPill(false)
     }
 
     const floodFill = (startX: number, startY: number, fillColor: string) => {
@@ -341,36 +487,103 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
 
       if (startR === fillR && startG === fillG && startB === fillB) return
 
-      const tolerance = 32
-      const visited = new Uint8Array(width * height)
-      const stack: number[] = [py * width + px]
+      const filled = new Uint8Array(width * height)
+      const boundary: number[] = []
 
-      while (stack.length > 0) {
-        const pos = stack.pop()!
-        if (visited[pos]) continue
-        if (barrier && barrier[pos] === 1) continue
-
+      const matches = (pos: number): boolean => {
+        if (barrier && barrier[pos] === 1) return false
         const idx = pos * 4
-        if (
-          Math.abs(data[idx] - startR) > tolerance ||
-          Math.abs(data[idx + 1] - startG) > tolerance ||
-          Math.abs(data[idx + 2] - startB) > tolerance
-        ) {
-          continue
-        }
+        return (
+          Math.abs(data[idx] - startR) <= FILL_TOLERANCE &&
+          Math.abs(data[idx + 1] - startG) <= FILL_TOLERANCE &&
+          Math.abs(data[idx + 2] - startB) <= FILL_TOLERANCE
+        )
+      }
 
-        visited[pos] = 1
+      const paint = (pos: number) => {
+        const idx = pos * 4
         data[idx] = fillR
         data[idx + 1] = fillG
         data[idx + 2] = fillB
         data[idx + 3] = 255
+      }
 
+      const stack: number[] = []
+      // Returns true if neighbour n blocks the flood (non-matching) and so makes
+      // `pos` a boundary pixel; fills + enqueues it when it matches. Hoisted out
+      // of the loop so the hot per-pixel path allocates no closures.
+      const blockedBy = (n: number): boolean => {
+        if (filled[n]) return false
+        if (matches(n)) {
+          filled[n] = 1
+          paint(n)
+          stack.push(n)
+          return false
+        }
+        return true
+      }
+
+      // Flood the contiguous same-color region (4-connected). Pixels are marked
+      // `filled` at push time so each is processed once and the stack stays
+      // bounded. A pixel touching a non-matching/out-of-bounds neighbour is a
+      // boundary pixel and seeds the dilation pass below.
+      const start = py * width + px
+      filled[start] = 1
+      paint(start)
+      stack.push(start)
+
+      while (stack.length > 0) {
+        const pos = stack.pop()!
         const x = pos % width
         const y = (pos - x) / width
-        if (x + 1 < width) stack.push(pos + 1)
-        if (x - 1 >= 0) stack.push(pos - 1)
-        if (y + 1 < height) stack.push(pos + width)
-        if (y - 1 >= 0) stack.push(pos - width)
+        let isBoundary = false
+
+        if (x + 1 < width) { if (blockedBy(pos + 1)) isBoundary = true } else isBoundary = true
+        if (x - 1 >= 0) { if (blockedBy(pos - 1)) isBoundary = true } else isBoundary = true
+        if (y + 1 < height) { if (blockedBy(pos + width)) isBoundary = true } else isBoundary = true
+        if (y - 1 >= 0) { if (blockedBy(pos - width)) isBoundary = true } else isBoundary = true
+
+        if (isBoundary) boundary.push(pos)
+      }
+
+      // Dilation: grow the filled region outward by ~1 CSS px (round(dpr) device
+      // px) to cover the anti-aliased seam between the fill edge and the separate,
+      // multiply-blended contour overlay (the visible halo). Only runs when a
+      // template barrier exists — the barrier both bounds the growth at the dark
+      // contour AND is the only safe stop; in barrier-free (blank) mode there is
+      // no overlay halo and dilation would erode the kid's own strokes.
+      if (barrier) {
+        const isBarrier = (p: number) => barrier[p] === 1
+        const dilatePasses = Math.max(1, Math.round(dpr))
+        let frontier = boundary
+        for (let pass = 0; pass < dilatePasses && frontier.length > 0; pass++) {
+          const next: number[] = []
+          const grow = (np: number) => {
+            if (filled[np] || isBarrier(np)) return
+            filled[np] = 1
+            paint(np)
+            next.push(np)
+          }
+          for (const pos of frontier) {
+            const x = pos % width
+            const y = (pos - x) / width
+            const right = x + 1 < width
+            const left = x - 1 >= 0
+            const down = y + 1 < height
+            const up = y - 1 >= 0
+            if (right) grow(pos + 1)
+            if (left) grow(pos - 1)
+            if (down) grow(pos + width)
+            if (up) grow(pos - width)
+            // Diagonals only when BOTH shared orthogonal cells are non-barrier,
+            // so growth can't squeeze across a 1px-thin diagonal contour.
+            if (right && down && !isBarrier(pos + 1) && !isBarrier(pos + width)) grow(pos + width + 1)
+            if (left && down && !isBarrier(pos - 1) && !isBarrier(pos + width)) grow(pos + width - 1)
+            if (right && up && !isBarrier(pos + 1) && !isBarrier(pos - width)) grow(pos - width + 1)
+            if (left && up && !isBarrier(pos - 1) && !isBarrier(pos - width)) grow(pos - width - 1)
+          }
+          frontier = next
+        }
       }
 
       ctx.putImageData(imageData, 0, 0)
@@ -384,32 +597,48 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       const x = pos.x - stampSize / 2
       const y = pos.y - stampSize / 2
       ctx.drawImage(stampImg, x, y, stampSize, stampSize)
+      hasDrawnRef.current = true
       saveToUndoStack()
       onStampPlaced?.()
       scheduleIdleSave()
+      onStrokeEnd?.()
     }
 
     const handlePointerDown = (e: React.PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        if (pointersRef.current.size === 2) {
+          beginPinch()
+          return
+        }
+        if (pointersRef.current.size > 2) return
+      }
       if (disabled) return
       e.preventDefault()
+      onStrokeStart?.()
       const pos = getPointerPos(e)
       const ctx = ctxRef.current
       if (!ctx) return
 
       if (stampSrc && stampImageRef.current) {
         placeStamp(pos)
+        onCelebrate?.('stamp', e.clientX, e.clientY)
         return
       }
 
       if (tool === 'fill') {
+        hasDrawnRef.current = true
         saveToUndoStack()
         floodFill(pos.x, pos.y, color)
+        onCelebrate?.('fill', e.clientX, e.clientY)
         scheduleIdleSave()
+        onStrokeEnd?.()
         return
       }
 
       saveToUndoStack()
       setIsDrawing(true)
+      strokeMovedRef.current = false
       lastPointRef.current = pos
 
       const size = effectiveBrushSize(e)
@@ -428,6 +657,14 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
     }
 
     const handlePointerMove = (e: React.PointerEvent) => {
+      if (e.pointerType === 'touch' && pointersRef.current.has(e.pointerId)) {
+        pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      }
+      if (pointersRef.current.size >= 2) {
+        e.preventDefault()
+        updatePinch()
+        return
+      }
       if (disabled || !isDrawing || !lastPointRef.current) return
       e.preventDefault()
       const ctx = ctxRef.current
@@ -439,13 +676,21 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       const pos = getPointerPos(e)
       drawStroke(lastPointRef.current, pos)
       lastPointRef.current = pos
+      strokeMovedRef.current = true
+      hasDrawnRef.current = true
     }
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (e: React.PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        pointersRef.current.delete(e.pointerId)
+        if (pointersRef.current.size < 2) gestureRef.current = null
+      }
       if (isDrawing) {
         setIsDrawing(false)
         lastPointRef.current = null
+        hasDrawnRef.current = true
         scheduleIdleSave()
+        onStrokeEnd?.()
       }
     }
 
@@ -472,10 +717,16 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         const canvas = canvasRef.current
         if (!ctx || !canvas) return
         saveToUndoStack()
-        const rect = canvas.getBoundingClientRect()
+        const { w, h } = frameRef.current
         ctx.fillStyle = '#FFFFFF'
-        ctx.fillRect(0, 0, rect.width, rect.height)
+        ctx.fillRect(0, 0, w, h)
+        // Clearing is a fresh start: drop any pending/loaded draft restore so a
+        // subsequent template load can't re-apply a stale draft over the blank.
+        restoredRef.current = true
+        restoreImgRef.current = null
+        hasDrawnRef.current = false
         scheduleIdleSave()
+        resetZoom()
       },
       canUndo: () => undoStack.length > 0,
       getImageDataUrl: () => {
@@ -514,25 +765,56 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         ref={containerRef}
         className="flex-1 w-full bg-white touch-canvas overflow-hidden relative"
       >
-        <canvas
-          ref={canvasRef}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          className="w-full h-full block"
-          style={{ touchAction: 'none', cursor: cursorStyle }}
-        />
-        {templateSrc && (
-          <img
-            src={templateSrc}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
-            style={{ mixBlendMode: 'multiply' }}
-            draggable={false}
+        {/* Inner transform layer: pinch-zoom scales the canvas AND the template
+            overlay together. The container above stays unscaled so the
+            ResizeObserver keeps reading the true frame size. */}
+        <div
+          className="absolute inset-0"
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: '0 0',
+            willChange: 'transform',
+          }}
+        >
+          <canvas
+            ref={canvasRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            className="w-full h-full block"
+            style={{ touchAction: 'none', cursor: cursorStyle }}
           />
+          {templateSrc && (
+            <img
+              src={templateSrc}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+              style={{ mixBlendMode: 'multiply' }}
+              draggable={false}
+            />
+          )}
+        </div>
+
+        {zoom > 1 && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+            <span
+              className="px-2.5 py-1 rounded-full bg-foreground/80 text-background text-xs font-display shadow transition-transform duration-200"
+              style={{ transform: showZoomPill ? 'scale(1.12)' : 'scale(1)' }}
+            >
+              {zoom.toFixed(1)}x
+            </span>
+            <button
+              onClick={resetZoom}
+              className="w-8 h-8 rounded-full bg-white shadow flex items-center justify-center text-foreground/70 hover:text-foreground"
+              aria-label="Reseteaza zoom"
+              title="Reseteaza zoom"
+            >
+              <Minimize2 className="w-4 h-4" />
+            </button>
+          </div>
         )}
       </div>
     )

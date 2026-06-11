@@ -119,3 +119,24 @@ export async function loadCanvas(id: string): Promise<Blob | null> {
   const blob = await db.get('canvases', id)
   return blob ?? null
 }
+
+// Free-draw drafts on /desen. Keyed per mode in the same 'canvases' store, but
+// deliberately separate from saveCanvas: drafts must NOT touch story progress
+// (saveCanvas sets 'in-progress'). Device-only, no server.
+const DRAFT_KEY = (mode: string) => `draft-${mode}`
+
+export async function saveDraft(mode: string, blob: Blob): Promise<void> {
+  const db = await getDb()
+  await db.put('canvases', blob, DRAFT_KEY(mode))
+}
+
+export async function loadDraft(mode: string): Promise<Blob | null> {
+  const db = await getDb()
+  const blob = await db.get('canvases', DRAFT_KEY(mode))
+  return blob ?? null
+}
+
+export async function clearDraft(mode: string): Promise<void> {
+  const db = await getDb()
+  await db.delete('canvases', DRAFT_KEY(mode))
+}

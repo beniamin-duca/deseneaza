@@ -2,13 +2,18 @@
 
 import { useRef, useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { Undo2 } from 'lucide-react'
 import { FloatingTopBar } from '@/components/floating-top-bar'
 import { FloatingToolbar, type Tool } from '@/components/floating-toolbar'
 import { TemplateSidebar } from '@/components/template-sidebar'
 import { StampSidebar } from '@/components/stamp-sidebar'
 import { KidCanvas, type KidCanvasRef } from '@/components/kid-canvas'
+import { SparkleOverlay, type SparkleOverlayRef } from '@/components/sparkle-overlay'
+import { playSound, vibrate, preloadSounds } from '@/lib/feedback'
 import { SaveShareSheet } from '@/components/save-share-sheet'
-import { type Template, type Stamp } from '@/lib/templates'
+import { TEMPLATES, type Template, type Stamp } from '@/lib/templates'
+import { saveDraft, loadDraft, clearDraft } from '@/lib/progress'
+import { useCustomColors } from '@/lib/use-custom-colors'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,27 +36,75 @@ function isDrawMode(value: string | null): value is DrawMode {
   return value === 'blank' || value === 'colorat'
 }
 
+// Which template the kid was last colouring, so a restored colorat draft shows
+// its outline again. Device-only, tiny — localStorage, SSR-guarded.
+const COLORAT_TEMPLATE_KEY = 'riza:draft-colorat-template'
+
+function readColoratTemplate(): Template | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const id = window.localStorage.getItem(COLORAT_TEMPLATE_KEY)
+    return id ? TEMPLATES.find((t) => t.id === id) ?? null : null
+  } catch {
+    return null
+  }
+}
+
+function writeColoratTemplate(id: string) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(COLORAT_TEMPLATE_KEY, id)
+  } catch {
+    // ignore
+  }
+}
+
 function DrawingPageContent() {
   const searchParams = useSearchParams()
   const modeParam = searchParams.get('mode')
   const mode: DrawMode = isDrawMode(modeParam) ? modeParam : 'blank'
 
   const canvasRef = useRef<KidCanvasRef>(null)
+  const sparkleRef = useRef<SparkleOverlayRef>(null)
+  const { customColors, addCustom, removeCustom } = useCustomColors()
   const [tool, setTool] = useState<Tool>('brush')
   const [color, setColor] = useState('#FF6B6B')
   const [brushSize, setBrushSize] = useState(16)
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [selectedStamp, setSelectedStamp] = useState<Stamp | null>(null)
   const [canUndo, setCanUndo] = useState(false)
+  const [showUndoHint, setShowUndoHint] = useState(false)
+  const undoHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showSaveSheet, setShowSaveSheet] = useState(false)
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
   const [showTemplateSidebar, setShowTemplateSidebar] = useState(false)
   const [showStampSidebar, setShowStampSidebar] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  // Device-only IndexedDB draft persistence for both modes. For 'colorat' the
+  // chosen template id is also persisted (localStorage) and restored so the
+  // outline reappears; the canvas re-applies the draft over the template's
+  // white-fill regardless of which image loads first.
+  const [initialBlob, setInitialBlob] = useState<Blob | null | undefined>(
+    undefined
+  )
 
   useEffect(() => {
-    if (mode === 'colorat') {
+    if (mode !== 'colorat') return
+    const restored = readColoratTemplate()
+    if (restored) {
+      setSelectedTemplate(restored)
+    } else {
       setShowTemplateSidebar(true)
+    }
+  }, [mode])
+
+  useEffect(() => {
+    let cancelled = false
+    loadDraft(mode).then((blob) => {
+      if (!cancelled) setInitialBlob(blob)
+    })
+    return () => {
+      cancelled = true
     }
   }, [mode])
 
@@ -64,15 +117,52 @@ function DrawingPageContent() {
     return () => clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (undoHintTimerRef.current) clearTimeout(undoHintTimerRef.current)
+    }
+  }, [])
+
+  // Transient "Anuleaza ultima" pill: show right after a stroke ends, hide the
+  // instant the next stroke starts (so a kid continuing to draw can't tap it).
+  const handleStrokeStart = () => {
+    preloadSounds()
+    setShowUndoHint(false)
+    if (undoHintTimerRef.current) clearTimeout(undoHintTimerRef.current)
+  }
+  const handleStrokeEnd = () => {
+    setShowUndoHint(true)
+    if (undoHintTimerRef.current) clearTimeout(undoHintTimerRef.current)
+    undoHintTimerRef.current = setTimeout(() => setShowUndoHint(false), 2000)
+  }
+
+  const handleCelebrate = (
+    type: 'fill' | 'stamp',
+    x: number,
+    y: number
+  ) => {
+    playSound(type)
+    vibrate(type)
+    if (type === 'fill') {
+      sparkleRef.current?.burst(x, y, { count: 18, colors: [color], speed: 0.32 })
+    } else {
+      sparkleRef.current?.burst(x, y, { count: 10 })
+    }
+  }
+
   const handleUndo = () => canvasRef.current?.undo()
   const handleClear = () => setShowClearConfirm(true)
   const handleConfirmClear = () => {
     canvasRef.current?.clear()
+    clearDraft(mode).catch(() => {})
     setShowClearConfirm(false)
   }
   const handleSave = () => {
     const dataUrl = canvasRef.current?.getImageDataUrl()
     if (dataUrl) {
+      playSound('complete')
+      vibrate('complete')
+      sparkleRef.current?.confetti()
       setImageDataUrl(dataUrl)
       setShowSaveSheet(true)
     }
@@ -103,6 +193,8 @@ function DrawingPageContent() {
   const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template)
     setShowTemplateSidebar(false)
+    writeColoratTemplate(template.id)
+    clearDraft('colorat').catch(() => {})
     canvasRef.current?.clear()
   }
 
@@ -116,9 +208,10 @@ function DrawingPageContent() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden relative">
-      <FloatingTopBar title={MODE_TITLES[mode]} />
+      <FloatingTopBar title={MODE_TITLES[mode]} showSound />
 
       <KidCanvas
+        key={mode}
         ref={canvasRef}
         tool={tool}
         color={color}
@@ -127,7 +220,31 @@ function DrawingPageContent() {
         stampSrc={stampSrc}
         onStampPlaced={() => {}}
         disabled={canvasDisabled}
+        initialImageBlob={initialBlob}
+        onCanvasIdle={(blob) => {
+          saveDraft(mode, blob).catch(() => {})
+        }}
+        onStrokeStart={handleStrokeStart}
+        onStrokeEnd={handleStrokeEnd}
+        onCelebrate={handleCelebrate}
       />
+
+      <SparkleOverlay ref={sparkleRef} />
+
+      {showUndoHint && !anySidebarOpen && (
+        <button
+          onClick={() => {
+            handleUndo()
+            setShowUndoHint(false)
+          }}
+          className="fixed bottom-24 left-4 z-30 floating-toolbar px-4 py-2 flex items-center gap-2 text-sm font-display text-foreground pop-in"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          aria-label="Anuleaza ultima"
+        >
+          <Undo2 className="w-4 h-4" />
+          Anuleaza ultima
+        </button>
+      )}
 
       <FloatingToolbar
         activeTool={tool}
@@ -146,6 +263,9 @@ function DrawingPageContent() {
         showTemplateButton={showTemplatesButton}
         canUndo={canUndo}
         hidden={anySidebarOpen}
+        customColors={customColors}
+        onAddCustom={addCustom}
+        onRemoveCustom={removeCustom}
       />
 
       <TemplateSidebar

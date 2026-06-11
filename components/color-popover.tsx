@@ -1,12 +1,14 @@
 'use client'
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { DRAWING_COLORS } from '@/lib/templates'
-import { cn } from '@/lib/utils'
+import { ColorPalette } from './color-palette'
 
 interface ColorPopoverProps {
   activeColor: string
   onColorChange: (color: string) => void
+  customColors: string[]
+  onRemoveCustom: (hex: string) => void
+  onRequestCustom: () => void
   side?: 'top' | 'bottom' | 'left' | 'right'
   align?: 'start' | 'center' | 'end'
 }
@@ -14,6 +16,9 @@ interface ColorPopoverProps {
 export function ColorPopover({
   activeColor,
   onColorChange,
+  customColors,
+  onRemoveCustom,
+  onRequestCustom,
   side = 'top',
   align = 'center',
 }: ColorPopoverProps) {
@@ -37,18 +42,14 @@ export function ColorPopover({
         sideOffset={12}
         className="w-auto p-3 rounded-2xl border-0 shadow-xl bg-white/95 backdrop-blur"
       >
-        <div className="grid grid-cols-7 gap-2">
-          {DRAWING_COLORS.map((color) => (
-            <button
-              key={color.id}
-              onClick={() => onColorChange(color.value)}
-              className={cn('color-swatch', activeColor === color.value && 'active')}
-              style={{ backgroundColor: color.value }}
-              aria-label={color.name}
-              title={color.name}
-            />
-          ))}
-        </div>
+        <ColorPalette
+          activeColor={activeColor}
+          onColorChange={onColorChange}
+          customColors={customColors}
+          onRemoveCustom={onRemoveCustom}
+          onRequestCustom={onRequestCustom}
+          variant="grid"
+        />
       </PopoverContent>
     </Popover>
   )
