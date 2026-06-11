@@ -8,6 +8,8 @@ import { FloatingToolbar, type Tool } from '@/components/floating-toolbar'
 import { TemplateSidebar } from '@/components/template-sidebar'
 import { StampSidebar } from '@/components/stamp-sidebar'
 import { KidCanvas, type KidCanvasRef } from '@/components/kid-canvas'
+import { SparkleOverlay, type SparkleOverlayRef } from '@/components/sparkle-overlay'
+import { playSound, vibrate, preloadSounds } from '@/lib/feedback'
 import { SaveShareSheet } from '@/components/save-share-sheet'
 import { TEMPLATES, type Template, type Stamp } from '@/lib/templates'
 import { saveDraft, loadDraft, clearDraft } from '@/lib/progress'
@@ -63,6 +65,7 @@ function DrawingPageContent() {
   const mode: DrawMode = isDrawMode(modeParam) ? modeParam : 'blank'
 
   const canvasRef = useRef<KidCanvasRef>(null)
+  const sparkleRef = useRef<SparkleOverlayRef>(null)
   const { customColors, addCustom, removeCustom } = useCustomColors()
   const [tool, setTool] = useState<Tool>('brush')
   const [color, setColor] = useState('#FF6B6B')
@@ -123,6 +126,7 @@ function DrawingPageContent() {
   // Transient "Anuleaza ultima" pill: show right after a stroke ends, hide the
   // instant the next stroke starts (so a kid continuing to draw can't tap it).
   const handleStrokeStart = () => {
+    preloadSounds()
     setShowUndoHint(false)
     if (undoHintTimerRef.current) clearTimeout(undoHintTimerRef.current)
   }
@@ -130,6 +134,20 @@ function DrawingPageContent() {
     setShowUndoHint(true)
     if (undoHintTimerRef.current) clearTimeout(undoHintTimerRef.current)
     undoHintTimerRef.current = setTimeout(() => setShowUndoHint(false), 2000)
+  }
+
+  const handleCelebrate = (
+    type: 'fill' | 'stamp',
+    x: number,
+    y: number
+  ) => {
+    playSound(type)
+    vibrate(type)
+    if (type === 'fill') {
+      sparkleRef.current?.burst(x, y, { count: 18, colors: [color], speed: 0.32 })
+    } else {
+      sparkleRef.current?.burst(x, y, { count: 10 })
+    }
   }
 
   const handleUndo = () => canvasRef.current?.undo()
@@ -142,6 +160,9 @@ function DrawingPageContent() {
   const handleSave = () => {
     const dataUrl = canvasRef.current?.getImageDataUrl()
     if (dataUrl) {
+      playSound('complete')
+      vibrate('complete')
+      sparkleRef.current?.confetti()
       setImageDataUrl(dataUrl)
       setShowSaveSheet(true)
     }
@@ -187,7 +208,7 @@ function DrawingPageContent() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden relative">
-      <FloatingTopBar title={MODE_TITLES[mode]} />
+      <FloatingTopBar title={MODE_TITLES[mode]} showSound />
 
       <KidCanvas
         key={mode}
@@ -205,7 +226,10 @@ function DrawingPageContent() {
         }}
         onStrokeStart={handleStrokeStart}
         onStrokeEnd={handleStrokeEnd}
+        onCelebrate={handleCelebrate}
       />
+
+      <SparkleOverlay ref={sparkleRef} />
 
       {showUndoHint && !anySidebarOpen && (
         <button

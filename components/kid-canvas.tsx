@@ -23,6 +23,11 @@ interface KidCanvasProps {
   templateSrc?: string | null
   stampSrc?: string | null
   onStampPlaced?: () => void
+  onCelebrate?: (
+    type: 'fill' | 'stamp',
+    clientX: number,
+    clientY: number
+  ) => void
   disabled?: boolean
   initialImageBlob?: Blob | null
   onCanvasIdle?: (blob: Blob) => void
@@ -80,6 +85,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
       templateSrc,
       stampSrc,
       onStampPlaced,
+      onCelebrate,
       disabled = false,
       initialImageBlob,
       onCanvasIdle,
@@ -616,6 +622,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
 
       if (stampSrc && stampImageRef.current) {
         placeStamp(pos)
+        onCelebrate?.('stamp', e.clientX, e.clientY)
         return
       }
 
@@ -623,6 +630,7 @@ export const KidCanvas = forwardRef<KidCanvasRef, KidCanvasProps>(
         hasDrawnRef.current = true
         saveToUndoStack()
         floodFill(pos.x, pos.y, color)
+        onCelebrate?.('fill', e.clientX, e.clientY)
         scheduleIdleSave()
         onStrokeEnd?.()
         return
