@@ -1,10 +1,26 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Reveal } from './reveal'
-import { GALLERY_SEED } from './gallery-data'
-
-const HEART = `<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg>`
+import { GALLERY_SEED, type GalleryItem } from './gallery-data'
 
 export function Gallery() {
+  const [items, setItems] = useState<GalleryItem[]>(GALLERY_SEED)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/gallery', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && Array.isArray(data) && data.length > 0) setItems(data)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   return (
     <section className="sec gallery" id="galerie">
       <div className="wrap">
@@ -14,15 +30,22 @@ export function Gallery() {
           <p>Mândri de ce-au făcut copiii. O selecție caldă, aleasă cu mâna — pe care o poate vedea oricine.</p>
         </Reveal>
         <div className="wall">
-          {GALLERY_SEED.map((g) => (
+          {items.map((g) => (
             <figure className="poly reveal" key={g.id}>
-              <div className="art" dangerouslySetInnerHTML={{ __html: g.art }} />
+              {g.image ? (
+                <div className="art">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={g.image}
+                    alt={`Desen de ${g.who}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
+              ) : (
+                <div className="art" dangerouslySetInnerHTML={{ __html: g.art ?? '' }} />
+              )}
               <figcaption className="cap">
                 <span className="who">{g.who}</span>
-                <span className="heart">
-                  <span dangerouslySetInnerHTML={{ __html: HEART }} />
-                  {g.hearts}
-                </span>
               </figcaption>
             </figure>
           ))}
@@ -30,7 +53,7 @@ export function Gallery() {
         <Reveal className="gallery-cta">
           <Link className="btn btn-primary" href="/desen">Desenează și tu</Link>
           <span className="gnote">
-            <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" stroke="#7CB342"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" /></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7CB342" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" /></svg>
             Galeria e verificată de oameni înainte de publicare — doar prenume și vârstă, niciodată date personale.
           </span>
         </Reveal>

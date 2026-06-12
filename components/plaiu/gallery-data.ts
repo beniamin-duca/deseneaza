@@ -1,8 +1,8 @@
 export interface GalleryItem {
   id: string
   who: string // first name + age, e.g. "Maria, 6 ani"
-  hearts: number
-  art: string // raw inline SVG markup for the artwork
+  art?: string // inline SVG markup (seed)
+  image?: string // data URL (real approved submission)
 }
 
 // Seeded from the design's sample artworks. Each `art` is the inner SVG of the
@@ -11,7 +11,6 @@ export const GALLERY_SEED: GalleryItem[] = [
   {
     id: 'maria',
     who: 'Maria, 6 ani',
-    hearts: 34,
     art: `<svg viewBox="0 0 100 100" aria-label="Desen: soare și căsuță">
             <rect width="100" height="100" fill="#FFFDF6"/>
             <circle cx="22" cy="22" r="11" fill="#FFD93D"/>
@@ -26,7 +25,6 @@ export const GALLERY_SEED: GalleryItem[] = [
   {
     id: 'andrei',
     who: 'Andrei, 5 ani',
-    hearts: 51,
     art: `<svg viewBox="0 0 100 100" aria-label="Desen: curcubeu">
             <rect width="100" height="100" fill="#EAF6FF"/>
             <g fill="none" stroke-width="6" stroke-linecap="round">
@@ -42,7 +40,6 @@ export const GALLERY_SEED: GalleryItem[] = [
   {
     id: 'sofia',
     who: 'Sofia, 7 ani',
-    hearts: 28,
     art: `<svg viewBox="0 0 100 100" aria-label="Desen: pisică">
             <rect width="100" height="100" fill="#FFF0F6"/>
             <path d="M32 30 L26 14 L42 26 Z" fill="#B08968"/>
@@ -58,7 +55,6 @@ export const GALLERY_SEED: GalleryItem[] = [
   {
     id: 'luca',
     who: 'Luca, 4 ani',
-    hearts: 40,
     art: `<svg viewBox="0 0 100 100" aria-label="Desen: floare">
             <rect width="100" height="100" fill="#F3FBE8"/>
             <path d="M50 92 V52" stroke="#5d8a2c" stroke-width="4" stroke-linecap="round"/>
@@ -70,7 +66,6 @@ export const GALLERY_SEED: GalleryItem[] = [
   {
     id: 'ana',
     who: 'Ana, 8 ani',
-    hearts: 62,
     art: `<svg viewBox="0 0 100 100" aria-label="Desen: pește">
             <rect width="100" height="100" fill="#E7F6FB"/>
             <path d="M30 50 C42 32 68 32 80 50 C68 68 42 68 30 50Z" fill="#6BB6E8"/>
@@ -83,7 +78,6 @@ export const GALLERY_SEED: GalleryItem[] = [
   {
     id: 'david',
     who: 'David, 6 ani',
-    hearts: 45,
     art: `<svg viewBox="0 0 100 100" aria-label="Desen: fluture">
             <rect width="100" height="100" fill="#FBF0FF"/>
             <path d="M50 30 V72" stroke="#2D3047" stroke-width="3" stroke-linecap="round"/>
