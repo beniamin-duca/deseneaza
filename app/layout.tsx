@@ -1,27 +1,41 @@
 import type { Metadata, Viewport } from 'next'
-import { Fredoka, Quicksand } from 'next/font/google'
+import { Fredoka, Quicksand, Baloo_2, Nunito } from 'next/font/google'
 import './globals.css'
 
-const fredoka = Fredoka({ 
+const fredoka = Fredoka({
   subsets: ['latin'],
   variable: '--font-fredoka',
   display: 'swap',
 })
 
-const quicksand = Quicksand({ 
+const quicksand = Quicksand({
   subsets: ['latin'],
   variable: '--font-quicksand',
   display: 'swap',
 })
 
+const baloo = Baloo_2({
+  subsets: ['latin'],
+  variable: '--font-baloo',
+  display: 'swap',
+})
+
+const nunito = Nunito({
+  subsets: ['latin'],
+  variable: '--font-nunito',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
-  title: 'Riza - Deseneaza si Coloreaza',
-  description: 'Aplicatie de desenat pentru copii. Deseneaza, coloreaza si distreaza-te!',
-  keywords: ['desenat', 'copii', 'colorat', 'aplicatie', 'creativ', 'arta'],
-  authors: [{ name: 'Riza' }],
+  title: 'Plaiu — Desenează online, gratuit, pentru copii',
+  description:
+    'Plaiu — locul unde copiii desenează și colorează gratuit. Pagini libere, povești, sărbători. Fără cont, fără reclame agresive.',
+  keywords: ['desene copii', 'colorat online', 'desenat gratuit', 'pagini de colorat', 'copii', 'Plaiu'],
+  authors: [{ name: 'Plaiu' }],
   openGraph: {
-    title: 'Riza - Deseneaza si Coloreaza',
-    description: 'Aplicatie de desenat pentru copii. Deseneaza, coloreaza si distreaza-te!',
+    title: 'Plaiu — Desenează online, gratuit, pentru copii',
+    description:
+      'Locul unde copiii desenează și colorează gratuit. Fără cont, fără reclame agresive.',
     locale: 'ro_RO',
     type: 'website',
   },
@@ -32,7 +46,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#FF6B6B',
+  themeColor: '#7CB342',
 }
 
 export default function RootLayout({
@@ -41,7 +55,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ro" className={`${fredoka.variable} ${quicksand.variable} bg-background`}>
+    <html lang="ro" className={`${fredoka.variable} ${quicksand.variable} ${baloo.variable} ${nunito.variable} bg-background`}>
       <body className="font-sans antialiased min-h-screen">
         {children}
       </body>
