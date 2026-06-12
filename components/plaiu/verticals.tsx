@@ -8,7 +8,7 @@ const V = [
 
 export function Verticals() {
   return (
-    <section className="sec verticals" id="verticale">
+    <section className="sec verticals" id="plaiuri">
       <div className="wrap">
         <Reveal className="sec-head">
           <span className="kicker">Mai multe pe Plaiu</span>
