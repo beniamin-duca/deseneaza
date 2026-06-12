@@ -109,8 +109,10 @@ export async function approve(id: string): Promise<void> {
   if (!isKvConfigured()) throw new Error('KV not configured')
   const item = await kv.get<GallerySubmission>(ITEM_KEY(id))
   if (!item) return
+  if (item.status === 'approved') return // idempotent: don't double-add to the list
   await kv.set(ITEM_KEY(id), { ...item, status: 'approved', approvedAt: Date.now() })
   await kv.lrem(PENDING_KEY, 0, id)
+  await kv.lrem(APPROVED_KEY, 0, id) // defensive: ensure a single entry
   await kv.lpush(APPROVED_KEY, id)
 }
 
