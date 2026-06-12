@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Plaiu — Hai să desenăm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --plai-meadow:#7CB342;--plai-sun:#FFD93D;--plai-folk:#E63946;--plai-cream:#FFF8E7;
+  --plai-sky:#6BB6E8;--plai-earth:#B08968;--plai-ink:#2D3047;--plai-ink-soft:#5b5f78;
+  --plai-pink:#F06BA8;--plai-purple:#9B7EDE;
+  --radius-pill:999px;--font-display:'Baloo 2',system-ui,sans-serif;--font-body:'Nunito',system-ui,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;}
+body{
+  font-family:var(--font-body);color:var(--plai-ink);
+  background:radial-gradient(1200px 600px at 50% -120px,rgba(107,182,232,.22),rgba(107,182,232,0) 65%),var(--plai-cream);
+  display:flex;flex-direction:column;height:100dvh;-webkit-font-smoothing:antialiased;user-select:none;touch-action:none;
+}
+button{font-family:var(--font-display);cursor:pointer;border:none;background:none;}
+h1,h2,h3{font-family:var(--font-display);margin:0;}
+
+/* ---------- top bar ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;flex:0 0 auto;z-index:10;}
+.back{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:700;font-size:22px;color:var(--plai-ink);text-decoration:none;padding:8px 10px;border-radius:var(--radius-pill);}
+.back .dot{width:8px;height:8px;border-radius:50%;background:var(--plai-meadow);}
+.back svg{width:20px;height:20px;stroke:var(--plai-ink-soft);}
+.mode-pill{font-family:var(--font-display);font-weight:600;font-size:15px;color:var(--plai-ink);background:#fff;padding:8px 16px;border-radius:var(--radius-pill);box-shadow:0 2px 0 rgba(45,48,71,.1);display:inline-flex;align-items:center;gap:8px;}
+.mode-pill .swap{font-size:13px;color:var(--plai-meadow);font-weight:700;}
+.save-btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:16px;color:#fff;background:var(--plai-folk);padding:11px 20px;border-radius:var(--radius-pill);box-shadow:0 4px 0 #c32b38;transition:transform .12s,box-shadow .12s;}
+.save-btn:hover{transform:translateY(-1px);}
+.save-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #c32b38;}
+.save-btn svg{width:18px;height:18px;stroke:#fff;}
+
+/* ---------- canvas stage ---------- */
+.stage{flex:1 1 auto;position:relative;display:flex;align-items:center;justify-content:center;padding:6px 16px 0;min-height:0;}
+.paper{position:relative;background:#fff;border-radius:20px;box-shadow:0 18px 50px -22px rgba(45,48,71,.5),0 3px 0 rgba(45,48,71,.06);overflow:hidden;}
+.paper canvas{display:block;border-radius:20px;touch-action:none;}
+.template-layer{position:absolute;inset:0;pointer-events:none;}
+.template-layer svg{width:100%;height:100%;}
+
+/* ---------- context row (templates / stickers) ---------- */
+.context{flex:0 0 auto;display:none;gap:10px;overflow-x:auto;padding:10px 16px 2px;scrollbar-width:none;}
+.context::-webkit-scrollbar{display:none;}
+.context.on{display:flex;}
+.ctx-item{flex:0 0 auto;width:62px;height:62px;border-radius:16px;background:#fff;box-shadow:0 2px 0 rgba(45,48,71,.1);display:flex;align-items:center;justify-content:center;font-size:30px;border:3px solid transparent;transition:transform .12s,border-color .12s;}
+.ctx-item:hover{transform:translateY(-2px);}
+.ctx-item.sel{border-color:var(--plai-meadow);}
+.ctx-item svg{width:38px;height:38px;}
+.ctx-label{flex:0 0 auto;align-self:center;font-family:var(--font-display);font-weight:600;font-size:13px;color:var(--plai-ink-soft);padding-right:6px;}
+
+/* ---------- bottom dock ---------- */
+.dock{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));overflow:hidden;}
+.group{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+.group#colors{flex:1 1 0;min-width:0;overflow-x:auto;scrollbar-width:none;padding:4px 2px;}
+.group#colors::-webkit-scrollbar{display:none;}
+.group + .group{border-left:2px solid rgba(45,48,71,.08);padding-left:12px;}
+.swatch{width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px rgba(45,48,71,.12),0 2px 4px rgba(45,48,71,.18);transition:transform .12s;flex:0 0 auto;}
+.swatch:hover{transform:scale(1.08);}
+.swatch.sel{transform:scale(1.16);box-shadow:0 0 0 3px var(--plai-ink),0 2px 6px rgba(45,48,71,.25);}
+.size-btn{width:42px;height:42px;border-radius:14px;background:#fff;box-shadow:0 2px 0 rgba(45,48,71,.1);display:flex;align-items:center;justify-content:center;transition:transform .12s;flex:0 0 auto;}
+.size-btn:hover{transform:translateY(-2px);}
+.size-btn.sel{background:var(--plai-ink);}
+.size-btn .dotx{border-radius:50%;background:var(--plai-ink);}
+.size-btn.sel .dotx{background:#fff;}
+.tool{width:46px;height:46px;border-radius:14px;background:#fff;box-shadow:0 2px 0 rgba(45,48,71,.1);display:flex;align-items:center;justify-content:center;transition:transform .12s,background .12s;flex:0 0 auto;}
+.tool:hover{transform:translateY(-2px);}
+.tool.sel{background:var(--plai-sun);}
+.tool svg{width:24px;height:24px;stroke:var(--plai-ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ---------- start overlay ---------- */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(45,48,71,.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:1;transition:opacity .25s;}
+.overlay.hide{opacity:0;pointer-events:none;}
+.sheet{background:var(--plai-cream);border-radius:28px;max-width:520px;width:100%;padding:30px 26px 26px;box-shadow:0 30px 70px -20px rgba(0,0,0,.5);text-align:center;animation:pop .3s cubic-bezier(.2,.8,.2,1.1) both;}
+@keyframes pop{from{opacity:0;transform:scale(.9) translateY(10px);}to{opacity:1;transform:none;}}
+.sheet h2{font-size:30px;font-weight:700;}
+.sheet .sub{color:var(--plai-ink-soft);font-size:16px;font-weight:600;margin-top:6px;}
+.pick-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px;}
+.pick{background:#fff;border-radius:20px;padding:20px 16px;text-align:left;box-shadow:0 4px 0 rgba(45,48,71,.1);border-bottom:5px solid var(--accent);transition:transform .14s,box-shadow .14s;display:flex;flex-direction:column;gap:6px;}
+.pick:hover{transform:translateY(-4px);box-shadow:0 10px 0 rgba(45,48,71,.08),0 16px 30px -18px rgba(45,48,71,.5);}
+.pick .pic{width:54px;height:54px;border-radius:16px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;margin-bottom:6px;}
+.pick .pic svg{width:30px;height:30px;stroke:var(--accent-ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.pick h3{font-size:19px;}
+.pick p{margin:0;font-size:13.5px;color:var(--plai-ink-soft);font-weight:600;}
+.pick.p1{--accent:var(--plai-meadow);--accent-soft:rgba(124,179,66,.16);--accent-ink:#5d8a2c;}
+.pick.p2{--accent:var(--plai-sky);--accent-soft:rgba(107,182,232,.2);--accent-ink:#2f7fb8;}
+.pick.p3{--accent:var(--plai-sun);--accent-soft:rgba(255,217,61,.3);--accent-ink:#a8841a;}
+.pick.p4{--accent:var(--plai-folk);--accent-soft:rgba(230,57,70,.14);--accent-ink:#c32b38;}
+
+/* ---------- save / share sheet ---------- */
+.share-ov{position:fixed;inset:0;z-index:60;background:rgba(45,48,71,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px;}
+.share-ov.on{display:flex;}
+.share-sheet{background:var(--plai-cream);border-radius:28px;max-width:440px;width:100%;padding:26px;box-shadow:0 30px 70px -20px rgba(0,0,0,.5);text-align:center;animation:pop .3s cubic-bezier(.2,.8,.2,1.1) both;}
+.share-sheet h2{font-size:26px;font-weight:700;}
+.share-sheet .sub{color:var(--plai-ink-soft);font-weight:600;font-size:15px;margin-top:4px;}
+.preview-frame{margin:18px auto 0;background:#fff;border-radius:16px;padding:10px;box-shadow:0 8px 24px -10px rgba(45,48,71,.4);max-width:280px;}
+.preview-frame img{display:block;width:100%;border-radius:8px;}
+.preview-cap{font-family:var(--font-display);font-weight:600;font-size:13px;color:var(--plai-ink-soft);margin-top:8px;}
+.share-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;}
+.share-actions .full{grid-column:1/-1;}
+.sbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-display);font-weight:600;font-size:15px;padding:13px 16px;border-radius:var(--radius-pill);transition:transform .12s;}
+.sbtn:hover{transform:translateY(-2px);}
+.sbtn svg{width:18px;height:18px;}
+.sbtn.dl{background:var(--plai-meadow);color:#fff;box-shadow:0 4px 0 #5d8a2c;}
+.sbtn.wa{background:#fff;color:var(--plai-ink);box-shadow:0 3px 0 rgba(45,48,71,.12);}
+.sbtn.gallery{background:var(--plai-folk);color:#fff;box-shadow:0 4px 0 #c32b38;}
+.sbtn.again{background:transparent;color:var(--plai-ink-soft);}
+.share-note{font-size:12.5px;color:var(--plai-ink-soft);font-weight:600;margin-top:14px;opacity:.85;}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--plai-ink);color:#fff;font-family:var(--font-display);font-weight:600;font-size:15px;padding:12px 22px;border-radius:var(--radius-pill);box-shadow:0 10px 30px -8px rgba(0,0,0,.5);opacity:0;transition:opacity .25s,transform .25s;z-index:70;pointer-events:none;}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media (max-width:560px){
+  .save-btn span{display:none;}
+  .save-btn{padding:11px 14px;}
+  .back{font-size:19px;}
+  .pick-grid{gap:10px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="Plaiu Home.html" aria-label="Înapoi pe Plaiu">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Plaiu<span class="dot"></span>
+  </a>
+  <button class="mode-pill" id="modePill" title="Schimbă modul">
+    <span id="modeName">Pagină goală</span>
+    <span class="swap">schimbă</span>
+  </button>
+  <button class="save-btn" id="saveBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+    <span>Salvează</span>
+  </button>
+</div>
+
+<div class="stage">
+  <div class="paper" id="paper">
+    <canvas id="canvas"></canvas>
+    <div class="template-layer" id="templateLayer"></div>
+  </div>
+</div>
+
+<div class="context" id="context"></div>
+
+<div class="dock" id="dock">
+  <div class="group" id="colors"></div>
+  <div class="group" id="sizes"></div>
+  <div class="group" id="tools">
+    <button class="tool" id="eraserTool" title="Radieră"><svg viewBox="0 0 24 24"><path d="M3 17l6 6h11"/><path d="M16 3l5 5L9 20l-5-5L16 3z"/></svg></button>
+    <button class="tool" id="undoTool" title="Înapoi"><svg viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></svg></button>
+    <button class="tool" id="clearTool" title="Șterge tot"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+  </div>
+</div>
+
+<!-- start overlay -->
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <h2>Ce desenăm azi?</h2>
+    <p class="sub">Alege un mod și gata — fără cont, fără așteptare.</p>
+    <div class="pick-grid">
+      <button class="pick p1" data-mode="liber">
+        <span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></span>
+        <h3>Pagină goală</h3>
+        <p>Începe de la zero</p>
+      </button>
+      <button class="pick p2" data-mode="colorat">
+        <span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.5A4 4 0 0 0 22 11.5 10 10 0 0 0 12 2z"/></svg></span>
+        <h3>Pagini de colorat</h3>
+        <p>Alege un desen</p>
+      </button>
+      <button class="pick p3" data-mode="stickere">
+        <span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 6.4L21 9l-5 4.3L17.6 21 12 16.9 6.4 21 8 13.3 3 9l6.6-.6L12 2z"/></svg></span>
+        <h3>Stickere & ștampile</h3>
+        <p>Distrează-te</p>
+      </button>
+      <button class="pick p4" data-mode="surpriza">
+        <span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v9H4v-9"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7S10.5 3 8 3a2.5 2.5 0 0 0 0 5h4M12 7s1.5-4 4-4a2.5 2.5 0 0 1 0 5h-4"/></svg></span>
+        <h3>Surpriză!</h3>
+        <p>Lasă Plaiu să aleagă</p>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- share sheet -->
+<div class="share-ov" id="shareOv">
+  <div class="share-sheet">
+    <h2>Ce frumos! 🎉</h2>
+    <p class="sub">Arată-le și altora desenul tău.</p>
+    <div class="preview-frame">
+      <img id="sharePreview" alt="Desenul tău" />
+    </div>
+    <div class="share-actions">
+      <button class="sbtn dl" id="dlBtn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Descarcă</button>
+      <button class="sbtn wa" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="#2D3047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Trimite</button>
+      <button class="sbtn gallery full" id="galleryBtn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg>Pune-l pe Plaiul tuturor</button>
+      <button class="sbtn again full" id="againBtn">Desenez mai departe</button>
+    </div>
+    <p class="share-note">Galeria e verificată de oameni înainte să apară. Fără nume de familie, fără date.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="draw-app.js"></script>
+</body>
+</html>

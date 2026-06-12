@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="ro" data-folk="1" data-bg="cream" data-mascot="copil">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Plaiu — Desenează online, gratuit, pentru copii</title>
+<meta name="description" content="Plaiu — locul unde copiii desenează și colorează gratuit. Pagini libere, povești, sărbători. Fără cont, fără reclame agresive." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --plai-meadow:#7CB342;
+  --plai-meadow-soft:#8FCB54;
+  --plai-sun:#FFD93D;
+  --plai-folk:#E63946;
+  --plai-cream:#FFF8E7;
+  --plai-sky:#6BB6E8;
+  --plai-earth:#B08968;
+  --plai-ink:#2D3047;
+  --plai-ink-soft:#5b5f78;
+
+  --radius-card:28px;
+  --radius-pill:999px;
+  --shadow-card:0 6px 0 rgba(45,48,71,0.12);
+  --shadow-soft:0 18px 40px -22px rgba(45,48,71,0.45);
+
+  --font-display:'Baloo 2', system-ui, sans-serif;
+  --font-body:'Nunito', system-ui, sans-serif;
+
+  --bg:var(--plai-cream);
+  --maxw:1120px;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-body);
+  color:var(--plai-ink);
+  background:var(--bg);
+  -webkit-font-smoothing:antialiased;
+  line-height:1.5;
+  overflow-x:hidden;
+}
+html[data-bg="cer"] body{
+  background:
+    radial-gradient(1200px 520px at 50% -180px, rgba(107,182,232,0.30), rgba(107,182,232,0) 70%),
+    var(--plai-cream);
+}
+html[data-bg="pajiste"] body{
+  background:
+    linear-gradient(180deg, #fffdf4 0%, var(--plai-cream) 40%, #f3f6e3 100%);
+}
+
+h1,h2,h3,.display{font-family:var(--font-display);font-weight:600;letter-spacing:-0.01em;margin:0;}
+p{margin:0;text-wrap:pretty;}
+a{color:inherit;text-decoration:none;}
+img,svg{display:block;}
+section{position:relative;}
+
+.wrap{width:100%;max-width:var(--maxw);margin:0 auto;padding:0 22px;}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  font-family:var(--font-display);font-weight:600;
+  border:none;cursor:pointer;border-radius:var(--radius-pill);
+  padding:16px 30px;font-size:19px;line-height:1;
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+  text-decoration:none;min-height:54px;white-space:nowrap;
+}
+.btn-primary{background:var(--plai-folk);color:#fff;box-shadow:0 6px 0 #c32b38;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 0 #c32b38;}
+.btn-primary:active{transform:translateY(3px);box-shadow:0 3px 0 #c32b38;}
+.btn-ghost{background:#fff;color:var(--plai-ink);box-shadow:var(--shadow-card);}
+.btn-ghost:hover{transform:translateY(-2px);}
+.btn-sun{background:var(--plai-sun);color:var(--plai-ink);box-shadow:0 6px 0 #e6bf1f;}
+.btn-sun:hover{transform:translateY(-2px);box-shadow:0 8px 0 #e6bf1f;}
+.btn-sun:active{transform:translateY(3px);box-shadow:0 3px 0 #e6bf1f;}
+
+/* ---------- top nav ---------- */
+.nav{
+  position:sticky;top:0;z-index:40;
+  backdrop-filter:saturate(1.2) blur(6px);
+  background:color-mix(in srgb, var(--plai-cream) 82%, transparent);
+  border-bottom:1px solid rgba(45,48,71,0.06);
+}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:70px;}
+.wordmark{display:inline-flex;align-items:flex-end;gap:0;font-family:var(--font-display);font-weight:700;font-size:30px;color:var(--plai-ink);position:relative;}
+.wordmark .dot{width:9px;height:9px;border-radius:50%;background:var(--plai-meadow);margin-left:3px;margin-bottom:6px;}
+.nav-links{display:flex;align-items:center;gap:8px;}
+.nav-link{font-weight:600;color:var(--plai-ink-soft);padding:10px 14px;border-radius:var(--radius-pill);font-size:15.5px;transition:background .15s,color .15s;}
+.nav-link:hover{background:rgba(45,48,71,0.06);color:var(--plai-ink);}
+.nav .btn{padding:11px 20px;font-size:16px;min-height:auto;}
+.nav-cta-wrap{display:flex;align-items:center;gap:6px;}
+
+/* ---------- hero ---------- */
+.hero{padding:46px 0 0;text-align:center;overflow:hidden;}
+.hero-inner{position:relative;z-index:3;max-width:760px;margin:0 auto;padding:0 22px;}
+.mascot{width:148px;height:148px;margin:0 auto 18px;position:relative;}
+.mascot svg{width:100%;height:100%;}
+.mascot::after{
+  content:"";position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);
+  width:120px;height:18px;border-radius:50%;background:rgba(45,48,71,0.10);filter:blur(3px);z-index:-1;
+}
+html[data-mascot="fara"] .mascot{display:none;}
+html[data-mascot="fara"] .hero{padding-top:70px;}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:var(--plai-meadow);background:rgba(124,179,66,0.14);padding:7px 16px;border-radius:var(--radius-pill);margin-bottom:18px;}
+.hero h1{font-size:clamp(38px,6.4vw,68px);font-weight:700;line-height:1.02;}
+.hero h1 .hl{color:var(--plai-folk);position:relative;white-space:nowrap;}
+.hero h1 .hl svg{position:absolute;left:-2%;right:-2%;bottom:-12px;width:104%;height:16px;}
+.tagline{font-family:var(--font-display);font-weight:500;font-size:clamp(18px,2.4vw,23px);color:var(--plai-ink);margin-top:18px;opacity:.92;}
+.hero .sub{font-size:18px;color:var(--plai-ink-soft);margin-top:10px;max-width:480px;margin-left:auto;margin-right:auto;}
+.hero-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:28px;}
+.chips{list-style:none;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0;margin:22px 0 0;}
+.chips li{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:14.5px;color:var(--plai-ink);background:#fff;border-radius:var(--radius-pill);padding:8px 15px;box-shadow:0 2px 0 rgba(45,48,71,0.08);}
+.chips li .tick{width:16px;height:16px;border-radius:50%;background:var(--plai-meadow);display:inline-flex;align-items:center;justify-content:center;}
+.chips li .tick svg{width:10px;height:10px;}
+
+/* meadow scene */
+.meadow{position:relative;margin-top:34px;height:170px;}
+.meadow svg{position:absolute;left:50%;transform:translateX(-50%);bottom:0;width:1600px;max-width:none;height:170px;}
+.sun{position:absolute;z-index:1;top:30px;right:max(20px,7vw);width:84px;height:84px;}
+.sun svg{width:100%;height:100%;}
+.cloud{position:absolute;z-index:1;top:54px;left:max(16px,6vw);width:120px;opacity:.9;}
+/* folk intensity */
+html[data-folk="0"] .sun,html[data-folk="0"] .cloud,html[data-folk="0"] .flori{display:none;}
+html[data-folk="0"] .meadow svg .backhill{opacity:.5;}
+html[data-folk="2"] .flori circle{opacity:1;}
+html[data-folk="2"] .stitch{display:block;}
+.stitch{display:none;}
+
+/* ---------- drawable hero ---------- */
+.hero-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;cursor:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'><g transform='rotate(45 15 15)'><rect x='12' y='1' width='6' height='17' rx='2' fill='%23E63946'/><rect x='12' y='4.5' width='6' height='2.4' fill='%23c32b38'/><path d='M12 18 L15 27 L18 18 Z' fill='%23FFE5C2'/><path d='M14 23 L15 27 L16 23 Z' fill='%232D3047'/></g></svg>") 4 26, crosshair;}
+.hero-inner{pointer-events:none;}
+.hero-inner a{pointer-events:auto;}
+html[data-doodle="off"] .hero-canvas,html[data-doodle="off"] .doodle-ui,html[data-doodle="off"] .doodle-hint,html[data-doodle="off"] .doodle-continue,html[data-doodle="off"] .doodle-toggle{display:none!important;}
+.doodle-ui{position:absolute;z-index:4;left:18px;bottom:16px;display:flex;align-items:center;gap:9px;background:#fff;padding:9px 12px;border-radius:var(--radius-pill);box-shadow:0 3px 0 rgba(45,48,71,.12);}
+.doodle-ui .d{width:26px;height:26px;border-radius:50%;border:none;cursor:pointer;box-shadow:inset 0 0 0 2px rgba(255,255,255,.7),0 0 0 1.5px rgba(45,48,71,.15);transition:transform .12s;padding:0;}
+.doodle-ui .d:hover{transform:scale(1.12);}
+.doodle-ui .d.sel{transform:scale(1.22);box-shadow:0 0 0 2.5px var(--plai-ink);}
+.doodle-ui .dclear{width:30px;height:30px;border-radius:50%;background:rgba(45,48,71,.07);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;padding:0;}
+.doodle-ui .dclear svg{width:16px;height:16px;stroke:var(--plai-ink-soft);fill:none;}
+.doodle-hint{position:absolute;z-index:4;left:5%;top:34%;font-family:var(--font-display);font-weight:600;font-size:19px;color:var(--plai-ink-soft);transform:rotate(-7deg);transition:opacity .4s;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;}
+.doodle-hint svg{width:46px;height:40px;}
+.doodle-hint.gone{opacity:0;}
+.doodle-continue{position:absolute;z-index:4;left:50%;bottom:16px;transform:translateX(-50%) translateY(10px);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:600;font-size:16px;background:var(--plai-ink);color:#fff;border:none;cursor:pointer;padding:12px 22px;border-radius:var(--radius-pill);box-shadow:0 6px 18px -6px rgba(45,48,71,.5);}
+.doodle-continue.on{opacity:1;pointer-events:auto;transform:translateX(-50%);}
+.doodle-toggle{display:none;position:absolute;z-index:5;right:18px;bottom:16px;width:52px;height:52px;border-radius:50%;background:#fff;box-shadow:0 3px 0 rgba(45,48,71,.12);align-items:center;justify-content:center;font-size:24px;border:none;cursor:pointer;}
+.hero.draw-on .doodle-toggle{background:var(--plai-sun);box-shadow:0 3px 0 #e6bf1f;}
+@media (max-width:1023px){.doodle-hint{display:none;}}
+@media (pointer:coarse){
+  .doodle-toggle{display:flex;}
+  .hero-canvas{pointer-events:none;}
+  .hero.draw-on .hero-canvas{pointer-events:auto;touch-action:none;}
+  .doodle-ui{display:none;}
+  .hero.draw-on .doodle-ui{display:flex;}
+  .doodle-continue{bottom:78px;}
+}
+
+/* ---------- section heading ---------- */
+.sec{padding:64px 0;}
+.sec-head{text-align:center;max-width:620px;margin:0 auto 40px;}
+.sec-head .kicker{font-family:var(--font-display);font-weight:600;color:var(--plai-meadow);letter-spacing:.05em;text-transform:uppercase;font-size:13.5px;}
+.sec-head h2{font-size:clamp(28px,4vw,42px);margin-top:10px;line-height:1.05;}
+.sec-head p{color:var(--plai-ink-soft);font-size:17.5px;margin-top:12px;}
+
+/* ---------- play modes ---------- */
+.modes-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
+.mode{
+  position:relative;display:flex;flex-direction:column;align-items:flex-start;
+  background:#fff;border-radius:var(--radius-card);padding:26px;
+  box-shadow:var(--shadow-card);text-align:left;overflow:hidden;
+  border-bottom:5px solid var(--accent);
+  transition:transform .18s ease, box-shadow .18s ease;min-height:184px;
+}
+.mode:hover{transform:translateY(-6px);box-shadow:0 14px 0 rgba(45,48,71,0.10),var(--shadow-soft);}
+.mode .ic{width:64px;height:64px;border-radius:20px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);margin-bottom:auto;}
+.mode .ic svg{width:34px;height:34px;stroke:var(--accent-ink);}
+.mode h3{font-size:23px;margin-top:20px;}
+.mode .msub{color:var(--plai-ink-soft);font-size:15.5px;margin-top:4px;font-weight:500;}
+.mode .go{position:absolute;top:24px;right:24px;width:34px;height:34px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;transition:transform .18s,background .18s;}
+.mode .go svg{width:16px;height:16px;stroke:var(--accent-ink);}
+.mode:hover .go{transform:translateX(3px);background:var(--accent);}
+.mode:hover .go svg{stroke:#fff;}
+.mode.m1{--accent:var(--plai-meadow);--accent-soft:rgba(124,179,66,.15);--accent-ink:#5d8a2c;}
+.mode.m2{--accent:var(--plai-sky);--accent-soft:rgba(107,182,232,.18);--accent-ink:#2f7fb8;}
+.mode.m3{--accent:var(--plai-sun);--accent-soft:rgba(255,217,61,.28);--accent-ink:#a8841a;}
+.mode.m4{--accent:var(--plai-folk);--accent-soft:rgba(230,57,70,.14);--accent-ink:#c32b38;}
+.stitch{position:absolute;inset:9px;border:2px dashed rgba(45,48,71,.16);border-radius:20px;pointer-events:none;}
+
+/* ---------- verticals ---------- */
+.verticals{background:linear-gradient(180deg, transparent, rgba(124,179,66,.06));}
+.vgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.vcard{
+  position:relative;border-radius:var(--radius-card);padding:24px;overflow:hidden;
+  background:#fff;box-shadow:var(--shadow-card);min-height:150px;display:flex;flex-direction:column;justify-content:flex-end;
+  transition:transform .18s ease;
+}
+.vcard:hover{transform:translateY(-4px);}
+.vcard .vic{position:absolute;top:18px;left:20px;font-size:30px;line-height:1;}
+.vcard h3{font-size:20px;}
+.vcard p{color:var(--plai-ink-soft);font-size:14.5px;margin-top:4px;}
+.vbadge{position:absolute;top:18px;right:18px;white-space:nowrap;font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.03em;color:var(--plai-ink);background:var(--plai-sun);padding:5px 12px;border-radius:var(--radius-pill);}
+.vcard.tint-povesti{background:linear-gradient(150deg,#fff,#f6efe6);border-bottom:5px solid var(--plai-earth);}
+.vcard.tint-biblie{background:linear-gradient(150deg,#fff,#fff6da);border-bottom:5px solid var(--plai-sun);}
+.vcard.tint-sarbatori{background:linear-gradient(150deg,#fff,#fdeaec);border-bottom:5px solid var(--plai-folk);}
+
+/* ---------- gallery (De pe Plaiu) ---------- */
+.gallery{padding-top:8px;}
+.wall{display:grid;grid-template-columns:repeat(3,1fr);gap:26px 22px;}
+.poly{background:#fff;padding:12px 12px 0;border-radius:8px;box-shadow:0 10px 30px -14px rgba(45,48,71,.4),0 2px 0 rgba(45,48,71,.06);transition:transform .2s ease, box-shadow .2s ease;}
+.poly:nth-child(3n+1){transform:rotate(-2.2deg);}
+.poly:nth-child(3n+2){transform:rotate(1.4deg);}
+.poly:nth-child(3n+3){transform:rotate(-0.8deg);}
+.poly:hover{transform:rotate(0) translateY(-6px) scale(1.02);box-shadow:0 22px 44px -18px rgba(45,48,71,.5);z-index:2;}
+.poly .art{border-radius:5px;overflow:hidden;aspect-ratio:1/1;background:#FFFDF6;}
+.poly .art svg{width:100%;height:100%;display:block;}
+.poly .cap{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 6px 14px;}
+.poly .cap .who{font-family:var(--font-display);font-weight:600;font-size:16px;color:var(--plai-ink);white-space:nowrap;}
+.poly .cap .heart{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-display);font-weight:600;font-size:14px;color:var(--plai-ink-soft);}
+.poly .cap .heart svg{width:15px;height:15px;fill:var(--plai-folk);}
+.gallery-cta{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:42px;text-align:center;}
+.gallery-cta .gnote{font-size:13.5px;color:var(--plai-ink-soft);font-weight:600;max-width:420px;display:inline-flex;align-items:center;gap:7px;justify-content:center;}
+.gallery-cta .gnote svg{width:16px;height:16px;stroke:var(--plai-meadow);flex:0 0 auto;}
+
+/* ---------- trust ---------- */
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+.tcard{text-align:center;padding:10px;}
+.tcard .tic{width:72px;height:72px;border-radius:24px;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;background:#fff;box-shadow:var(--shadow-card);}
+.tcard .tic svg{width:36px;height:36px;}
+.tcard h3{font-size:20px;}
+.tcard p{color:var(--plai-ink-soft);font-size:16px;margin-top:8px;max-width:300px;margin-left:auto;margin-right:auto;}
+
+/* ---------- story band ---------- */
+.story{background:var(--plai-meadow);color:#fff;border-radius:36px;margin:0 22px;overflow:hidden;}
+.story-in{max-width:var(--maxw);margin:0 auto;padding:62px 26px;text-align:center;position:relative;}
+.story .quote{font-family:var(--font-display);font-weight:600;font-size:clamp(26px,4.2vw,44px);line-height:1.12;max-width:760px;margin:0 auto;}
+.story .quote .em{color:var(--plai-sun);}
+.story .src{margin-top:14px;font-weight:600;opacity:.85;letter-spacing:.02em;}
+.story .lede{max-width:620px;margin:26px auto 0;font-size:17.5px;line-height:1.65;color:rgba(255,255,255,.92);}
+.story .hills-deco{position:absolute;left:0;right:0;bottom:-2px;height:60px;opacity:.5;}
+
+/* ---------- final cta ---------- */
+.ctaband{text-align:center;padding:72px 22px;}
+.ctaband h2{font-size:clamp(30px,4.6vw,48px);}
+.ctaband p{color:var(--plai-ink-soft);font-size:18px;margin:14px auto 28px;max-width:460px;}
+.ctaband .mini{margin-top:16px;font-size:14px;color:var(--plai-ink-soft);font-weight:600;}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid rgba(45,48,71,0.08);padding:34px 22px 40px;}
+.foot-in{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;}
+.foot-brand{display:flex;align-items:center;gap:12px;}
+.foot-brand .wordmark{font-size:24px;}
+.foot-credit{color:var(--plai-ink-soft);font-size:14px;font-weight:600;}
+.foot-credit .heart{color:var(--plai-folk);}
+.foot-links{display:flex;gap:6px;flex-wrap:wrap;}
+.foot-links a{color:var(--plai-ink-soft);font-weight:600;font-size:14.5px;padding:8px 12px;border-radius:var(--radius-pill);transition:background .15s,color .15s;}
+.foot-links a:hover{background:rgba(45,48,71,0.06);color:var(--plai-ink);}
+
+/* ---------- reveal anim ----------
+   Base state is VISIBLE. The .in class (added by the observer) only *adds*
+   a one-shot rise animation. If JS/observer never runs (static capture,
+   print, no-JS), content stays fully visible. */
+@media (prefers-reduced-motion: no-preference){
+  body.anim .reveal.in{animation:rise .6s cubic-bezier(.2,.7,.2,1) forwards;}
+  body.anim .reveal.in.d1{animation-delay:.07s;}
+  body.anim .reveal.in.d2{animation-delay:.14s;}
+  body.anim .reveal.in.d3{animation-delay:.21s;}
+  @keyframes rise{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:none;}}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-1deg);}50%{transform:translateY(-7px) rotate(1deg);}}
+  body.anim .mascot svg{animation:bob 4.5s ease-in-out infinite;transform-origin:center bottom;}
+  @keyframes spinsun{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  body.anim .sun .rays{animation:spinsun 60s linear infinite;transform-origin:center;}
+}
+
+/* ---------- responsive ---------- */
+@media (max-width:860px){
+  .vgrid,.tgrid,.wall{grid-template-columns:1fr 1fr;}
+  .tcard p{max-width:none;}
+}
+@media (max-width:560px){
+  .nav-links .nav-link{display:none;}
+  .modes-grid{grid-template-columns:1fr;}
+  .vgrid,.tgrid{grid-template-columns:1fr;}
+  .wall{grid-template-columns:1fr 1fr;gap:18px 14px;}
+  .hero{padding-top:30px;}
+  .mascot{width:120px;height:120px;}
+  .foot-in{flex-direction:column;text-align:center;}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="wordmark" href="#" aria-label="Plaiu — acasă">Plaiu<span class="dot"></span></a>
+    <nav class="nav-links" aria-label="Navigare">
+      <a class="nav-link" href="#moduri">Desenează</a>
+      <a class="nav-link" href="#verticale">Verticale</a>
+      <a class="nav-link" href="#parinti">Pentru părinți</a>
+      <div class="nav-cta-wrap">
+        <a class="btn btn-primary" href="Plaiu Draw.html">Hai să desenăm</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ============ HERO ============ -->
+<section class="hero" data-screen-label="Hero">
+  <canvas class="hero-canvas" id="heroCanvas" aria-label="Foaie de desen — încearcă aici"></canvas>
+  <div class="hero-inner">
+    <!-- Mascotă v1 (copilul de pe plai) — placeholder până la logo final -->
+    <div class="mascot reveal" data-mascot-slot>
+      <!-- copil -->
+      <svg class="m-copil" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-label="Mascotă Plaiu — copil pe plai">
+        <ellipse cx="100" cy="182" rx="78" ry="15" fill="#7CB342"/>
+        <ellipse cx="100" cy="179" rx="66" ry="12" fill="#8FCB54"/>
+        <circle cx="44" cy="180" r="3" fill="#FFD93D"/>
+        <circle cx="158" cy="181" r="3" fill="#E63946"/>
+        <circle cx="146" cy="174" r="2" fill="#FFD93D"/>
+        <path d="M 72 134 L 128 134 L 132 174 L 68 174 Z" fill="#FFF8E7" stroke="#e7dcc2" stroke-width="1.5"/>
+        <rect x="93" y="134" width="14" height="40" fill="#E63946"/>
+        <rect x="93" y="142" width="14" height="2" fill="#FFD93D"/>
+        <rect x="93" y="158" width="14" height="2" fill="#FFD93D"/>
+        <circle cx="100" cy="102" r="31" fill="#FFE5C2"/>
+        <path d="M 70 92 Q 70 63 100 59 Q 130 63 130 92 Q 130 80 100 78 Q 70 80 70 92 Z" fill="#3A2618"/>
+        <circle cx="91" cy="102" r="3" fill="#2D3047"/>
+        <circle cx="109" cy="102" r="3" fill="#2D3047"/>
+        <circle cx="83" cy="113" r="4" fill="#FFA8A8" opacity="0.6"/>
+        <circle cx="117" cy="113" r="4" fill="#FFA8A8" opacity="0.6"/>
+        <path d="M 92 118 Q 100 126 108 118" stroke="#2D3047" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <g transform="translate(140 150) rotate(-20)">
+          <rect x="0" y="-30" width="7" height="32" fill="#FFD93D"/>
+          <rect x="0" y="-35" width="7" height="5" fill="#E63946"/>
+          <polygon points="0,2 3.5,12 7,2" fill="#2D3047"/>
+        </g>
+      </svg>
+      <!-- pensulă veselă -->
+      <svg class="m-pensula" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-label="Mascotă Plaiu — pensulă" style="display:none">
+        <ellipse cx="100" cy="184" rx="60" ry="12" fill="rgba(45,48,71,.10)"/>
+        <rect x="78" y="96" width="44" height="78" rx="20" fill="#F2EAD6" stroke="#e0d4b6" stroke-width="2"/>
+        <path d="M 78 70 Q 78 40 100 38 Q 122 40 122 70 Z" fill="#7CB342"/>
+        <path d="M 84 64 Q 92 44 100 44 Q 100 60 84 70 Z" fill="#FFD93D"/>
+        <path d="M 116 64 Q 108 44 100 44 Q 100 60 116 70 Z" fill="#6BB6E8"/>
+        <path d="M 100 38 Q 100 30 100 30" stroke="#E63946" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="91" cy="120" r="3.4" fill="#2D3047"/>
+        <circle cx="109" cy="120" r="3.4" fill="#2D3047"/>
+        <circle cx="84" cy="130" r="4.5" fill="#FFA8A8" opacity=".6"/>
+        <circle cx="116" cy="130" r="4.5" fill="#FFA8A8" opacity=".6"/>
+        <path d="M 92 132 Q 100 140 108 132" stroke="#2D3047" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+        <rect x="88" y="168" width="9" height="20" rx="4" fill="#E63946"/>
+        <rect x="103" y="168" width="9" height="20" rx="4" fill="#FFD93D"/>
+      </svg>
+    </div>
+
+    <span class="eyebrow reveal d1">Desenăm gratis · fără cont</span>
+    <h1 class="reveal d1">Ce desenăm azi pe
+      <span class="hl">Plaiu<svg viewBox="0 0 200 16" preserveAspectRatio="none" aria-hidden="true"><path d="M3 11 Q 60 2 100 8 T 197 6" stroke="#FFD93D" stroke-width="7" fill="none" stroke-linecap="round"/></svg></span>?</h1>
+    <p class="tagline reveal d2">Pe-un plai de desene, pe-o gură de joacă.</p>
+    <p class="sub reveal d2">Apasă pe un mod și începe — fără cont, fără așteptare, fără reclame.</p>
+    <div class="hero-actions reveal d3">
+      <a class="btn btn-primary" href="Plaiu Draw.html">Hai să desenăm!</a>
+      <a class="btn btn-ghost" href="#parinti">Pentru părinți</a>
+    </div>
+    <ul class="chips reveal d3">
+      <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Fără cont</li>
+      <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Fără reclame</li>
+      <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Sigur pentru cei mici</li>
+    </ul>
+  </div>
+
+  <!-- meadow scene -->
+  <div class="cloud" aria-hidden="true">
+    <svg viewBox="0 0 120 60"><g fill="#ffffff"><circle cx="32" cy="36" r="20"/><circle cx="56" cy="30" r="24"/><circle cx="84" cy="38" r="18"/><rect x="30" y="36" width="58" height="20" rx="10"/></g></svg>
+  </div>
+  <div class="sun" aria-hidden="true">
+    <svg viewBox="0 0 100 100"><g class="rays" stroke="#FFD93D" stroke-width="5" stroke-linecap="round"><line x1="50" y1="6" x2="50" y2="18"/><line x1="50" y1="82" x2="50" y2="94"/><line x1="6" y1="50" x2="18" y2="50"/><line x1="82" y1="50" x2="94" y2="50"/><line x1="18" y1="18" x2="27" y2="27"/><line x1="73" y1="73" x2="82" y2="82"/><line x1="82" y1="18" x2="73" y2="27"/><line x1="27" y1="73" x2="18" y2="82"/></g><circle cx="50" cy="50" r="22" fill="#FFD93D"/></svg>
+  </div>
+  <div class="meadow" aria-hidden="true">
+    <svg viewBox="0 0 1600 170" preserveAspectRatio="xMidYMax slice">
+      <path class="backhill" d="M0 90 C 250 40 480 60 760 50 C 1060 40 1300 70 1600 48 L1600 170 L0 170 Z" fill="#8FCB54"/>
+      <path d="M0 120 C 300 80 560 110 880 96 C 1180 84 1400 116 1600 100 L1600 170 L0 170 Z" fill="#7CB342"/>
+      <g class="flori" fill="none">
+        <g transform="translate(180 118)"><line x1="0" y1="0" x2="0" y2="20" stroke="#5d8a2c" stroke-width="2"/><circle cx="0" cy="-2" r="5" fill="#E63946" opacity=".55"/></g>
+        <g transform="translate(420 128)"><line x1="0" y1="0" x2="0" y2="18" stroke="#5d8a2c" stroke-width="2"/><circle cx="0" cy="-2" r="5" fill="#FFD93D" opacity=".55"/></g>
+        <g transform="translate(700 124)"><line x1="0" y1="0" x2="0" y2="20" stroke="#5d8a2c" stroke-width="2"/><circle cx="0" cy="-2" r="5" fill="#6BB6E8" opacity=".55"/></g>
+        <g transform="translate(980 130)"><line x1="0" y1="0" x2="0" y2="18" stroke="#5d8a2c" stroke-width="2"/><circle cx="0" cy="-2" r="5" fill="#E63946" opacity=".55"/></g>
+        <g transform="translate(1240 122)"><line x1="0" y1="0" x2="0" y2="20" stroke="#5d8a2c" stroke-width="2"/><circle cx="0" cy="-2" r="5" fill="#FFD93D" opacity=".55"/></g>
+        <g transform="translate(1420 130)"><line x1="0" y1="0" x2="0" y2="18" stroke="#5d8a2c" stroke-width="2"/><circle cx="0" cy="-2" r="5" fill="#6BB6E8" opacity=".55"/></g>
+      </g>
+    </svg>
+  </div>
+
+  <div class="doodle-hint" id="doodleHint" aria-hidden="true">
+    <svg viewBox="0 0 50 40" fill="none" stroke="#5b5f78" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 C 14 20 26 30 42 32"></path><path d="M34 28 L 43 32 L 36 38"></path></svg>
+    încearcă aici!
+  </div>
+  <div class="doodle-ui" id="doodleUi" role="toolbar" aria-label="Culori de desen">
+    <button class="d sel" style="background:#E63946" data-c="#E63946" aria-label="Roșu"></button>
+    <button class="d" style="background:#FFD93D" data-c="#FFD93D" aria-label="Galben"></button>
+    <button class="d" style="background:#7CB342" data-c="#7CB342" aria-label="Verde"></button>
+    <button class="d" style="background:#6BB6E8" data-c="#6BB6E8" aria-label="Albastru"></button>
+    <button class="d" style="background:#2D3047" data-c="#2D3047" aria-label="Închis"></button>
+    <button class="dclear" id="doodleClear" aria-label="Șterge desenul"><svg viewBox="0 0 24 24" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"></path><path d="M3 13a9 9 0 1 0 3-7.7L3 8"></path></svg></button>
+  </div>
+  <button class="doodle-continue" id="doodleContinue">Ia desenul cu tine
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+  </button>
+  <button class="doodle-toggle" id="doodleToggle" aria-label="Desenează pe plai">✏️</button>
+</section>
+
+<!-- ============ PLAY MODES ============ -->
+<section class="sec" id="moduri">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kicker">4 moduri de joacă</span>
+      <h2>Cu ce începem azi?</h2>
+      <p>Două atingeri și creionul e pe pagină. Alege un mod și gata.</p>
+    </div>
+    <div class="modes-grid">
+      <a class="mode m1 reveal" href="Plaiu Draw.html?mode=liber">
+        <span class="stitch"></span>
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></span>
+        <h3>Pagină goală</h3>
+        <p class="msub">Începe de la zero</p>
+        <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="mode m2 reveal d1" href="Plaiu Draw.html?mode=colorat">
+        <span class="stitch"></span>
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.5A4 4 0 0 0 22 11.5 10 10 0 0 0 12 2z"/><circle cx="7.5" cy="11.5" r="1.2" fill="currentColor"/><circle cx="12" cy="8" r="1.2" fill="currentColor"/><circle cx="16.5" cy="11.5" r="1.2" fill="currentColor"/></svg></span>
+        <h3>Pagini de colorat</h3>
+        <p class="msub">Alege un desen</p>
+        <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="mode m3 reveal" href="Plaiu Draw.html?mode=stickere">
+        <span class="stitch"></span>
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 6.4L21 9l-5 4.3L17.6 21 12 16.9 6.4 21 8 13.3 3 9l6.6-.6L12 2z"/></svg></span>
+        <h3>Stickere & ștampile</h3>
+        <p class="msub">Distrează-te cu stickere</p>
+        <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="mode m4 reveal d1" href="Plaiu Draw.html?mode=surpriza">
+        <span class="stitch"></span>
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v9H4v-9"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7S10.5 3 8 3a2.5 2.5 0 0 0 0 5h4M12 7s1.5-4 4-4a2.5 2.5 0 0 1 0 5h-4"/></svg></span>
+        <h3>Surpriză!</h3>
+        <p class="msub">Lasă Plaiu să aleagă</p>
+        <span class="go"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GALLERY · DE PE PLAIU ============ -->
+<section class="sec gallery" id="galerie" data-screen-label="Galerie">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kicker">De pe Plaiu</span>
+      <h2>Desenele de azi ale celor mici</h2>
+      <p>Mândri de ce-au făcut copiii. O selecție caldă, aleasă cu mâna — pe care o poate vedea oricine.</p>
+    </div>
+    <div class="wall">
+      <figure class="poly reveal">
+        <div class="art">
+          <svg viewBox="0 0 100 100" aria-label="Desen: soare și căsuță">
+            <rect width="100" height="100" fill="#FFFDF6"/>
+            <circle cx="22" cy="22" r="11" fill="#FFD93D"/>
+            <g stroke="#FFD93D" stroke-width="2.6" stroke-linecap="round"><path d="M22 5v6"/><path d="M22 33v6"/><path d="M5 22h6"/><path d="M33 22h6"/><path d="M10 10l4 4"/><path d="M30 30l4 4"/></g>
+            <path d="M52 50 L72 35 L92 50 Z" fill="#E63946"/>
+            <rect x="56" y="50" width="32" height="30" fill="#FFE5C2" stroke="#B08968" stroke-width="2"/>
+            <rect x="67" y="62" width="11" height="18" fill="#B08968"/>
+            <path d="M2 84 Q 50 76 100 84" stroke="#7CB342" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <path d="M14 84 v-7 M22 84 v-9 M30 84 v-7" stroke="#5d8a2c" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <figcaption class="cap"><span class="who">Maria, 6 ani</span><span class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg>34</span></figcaption>
+      </figure>
+
+      <figure class="poly reveal d1">
+        <div class="art">
+          <svg viewBox="0 0 100 100" aria-label="Desen: curcubeu">
+            <rect width="100" height="100" fill="#EAF6FF"/>
+            <g fill="none" stroke-width="6" stroke-linecap="round">
+              <path d="M14 86 A 36 36 0 0 1 86 86" stroke="#E63946"/>
+              <path d="M22 86 A 28 28 0 0 1 78 86" stroke="#FFD93D"/>
+              <path d="M30 86 A 20 20 0 0 1 70 86" stroke="#7CB342"/>
+              <path d="M38 86 A 12 12 0 0 1 62 86" stroke="#6BB6E8"/>
+            </g>
+            <circle cx="78" cy="22" r="9" fill="#FFD93D"/>
+            <g fill="#fff"><circle cx="24" cy="30" r="8"/><circle cx="34" cy="28" r="10"/><circle cx="44" cy="32" r="7"/></g>
+          </svg>
+        </div>
+        <figcaption class="cap"><span class="who">Andrei, 5 ani</span><span class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg>51</span></figcaption>
+      </figure>
+
+      <figure class="poly reveal d2">
+        <div class="art">
+          <svg viewBox="0 0 100 100" aria-label="Desen: pisică">
+            <rect width="100" height="100" fill="#FFF0F6"/>
+            <path d="M32 30 L26 14 L42 26 Z" fill="#B08968"/>
+            <path d="M68 30 L74 14 L58 26 Z" fill="#B08968"/>
+            <circle cx="50" cy="52" r="28" fill="#FFD93D"/>
+            <circle cx="40" cy="48" r="3.4" fill="#2D3047"/>
+            <circle cx="60" cy="48" r="3.4" fill="#2D3047"/>
+            <path d="M46 58 Q 50 62 54 58" stroke="#2D3047" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <path d="M50 56 v3" stroke="#2D3047" stroke-width="2" stroke-linecap="round"/>
+            <g stroke="#2D3047" stroke-width="1.8" stroke-linecap="round"><path d="M22 54h12M22 60h12M66 54h12M66 60h12"/></g>
+          </svg>
+        </div>
+        <figcaption class="cap"><span class="who">Sofia, 7 ani</span><span class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg>28</span></figcaption>
+      </figure>
+
+      <figure class="poly reveal">
+        <div class="art">
+          <svg viewBox="0 0 100 100" aria-label="Desen: floare">
+            <rect width="100" height="100" fill="#F3FBE8"/>
+            <path d="M50 92 V52" stroke="#5d8a2c" stroke-width="4" stroke-linecap="round"/>
+            <path d="M50 70 Q 34 64 30 74 Q 44 78 50 70Z" fill="#7CB342"/>
+            <g fill="#F06BA8"><ellipse cx="50" cy="28" rx="9" ry="14"/><ellipse cx="50" cy="56" rx="9" ry="14"/><ellipse cx="36" cy="42" rx="14" ry="9"/><ellipse cx="64" cy="42" rx="14" ry="9"/></g>
+            <circle cx="50" cy="42" r="9" fill="#FFD93D"/>
+          </svg>
+        </div>
+        <figcaption class="cap"><span class="who">Luca, 4 ani</span><span class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg>40</span></figcaption>
+      </figure>
+
+      <figure class="poly reveal d1">
+        <div class="art">
+          <svg viewBox="0 0 100 100" aria-label="Desen: pește">
+            <rect width="100" height="100" fill="#E7F6FB"/>
+            <path d="M30 50 C42 32 68 32 80 50 C68 68 42 68 30 50Z" fill="#6BB6E8"/>
+            <path d="M30 50 L16 38 L20 50 L16 62 Z" fill="#2f7fb8"/>
+            <circle cx="68" cy="44" r="4" fill="#fff"/><circle cx="69" cy="44" r="2" fill="#2D3047"/>
+            <path d="M52 38 Q 56 50 52 62" stroke="#2f7fb8" stroke-width="2.4" fill="none"/>
+            <g stroke="#2f7fb8" stroke-width="2" fill="none" stroke-linecap="round"><path d="M10 78 q6 -6 12 0 t12 0 t12 0 t12 0 t12 0"/></g>
+          </svg>
+        </div>
+        <figcaption class="cap"><span class="who">Ana, 8 ani</span><span class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg>62</span></figcaption>
+      </figure>
+
+      <figure class="poly reveal d2">
+        <div class="art">
+          <svg viewBox="0 0 100 100" aria-label="Desen: fluture">
+            <rect width="100" height="100" fill="#FBF0FF"/>
+            <path d="M50 30 V72" stroke="#2D3047" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="50" cy="26" r="4" fill="#2D3047"/>
+            <path d="M47 23 q-4 -7 -8 -6 M53 23 q4 -7 8 -6" stroke="#2D3047" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M48 40 C26 22 12 36 22 52 C12 66 34 72 48 56 Z" fill="#9B7EDE"/>
+            <path d="M52 40 C74 22 88 36 78 52 C88 66 66 72 52 56 Z" fill="#F06BA8"/>
+            <circle cx="30" cy="40" r="3" fill="#fff"/><circle cx="70" cy="40" r="3" fill="#fff"/>
+          </svg>
+        </div>
+        <figcaption class="cap"><span class="who">David, 6 ani</span><span class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg>45</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="gallery-cta reveal">
+      <a class="btn btn-primary" href="Plaiu Draw.html">Desenează și tu</a>
+      <span class="gnote"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>Galeria e verificată de oameni înainte de publicare — doar prenume și vârstă, niciodată date personale.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VERTICALS ============ -->
+<section class="sec verticals" id="verticale">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kicker">Mai multe pe Plaiu</span>
+      <h2>Tot mai multe plaiuri de explorat</h2>
+      <p>Plaiu crește. Poveștile bunicilor, sărbătorile și sfinții — toate, colorate de mâinile celor mici.</p>
+    </div>
+    <div class="vgrid">
+      <a class="vcard tint-povesti reveal" href="#">
+        <span class="vic">📖</span>
+        <span class="vbadge">în curând</span>
+        <h3>Plaiu Povești</h3>
+        <p>Basmele românești — Făt-Frumos, Capra cu trei iezi, Greuceanu.</p>
+      </a>
+      <a class="vcard tint-biblie reveal d1" href="#">
+        <span class="vic">🕊️</span>
+        <span class="vbadge">în curând</span>
+        <h3>Plaiu Biblie</h3>
+        <p>Poveștile sfinte și sfinții zilei, colorate de mâinile celor mici.</p>
+      </a>
+      <a class="vcard tint-sarbatori reveal d2" href="#">
+        <span class="vic">🎄</span>
+        <span class="vbadge">în curând</span>
+        <h3>Plaiu Sărbători</h3>
+        <p>Mărțișor, Paște, Crăciun — câte un plai pentru fiecare sărbătoare.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRUST / PARENTS ============ -->
+<section class="sec" id="parinti">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="kicker">Pentru părinți</span>
+      <h2>Un plai sigur pentru copilul tău</h2>
+      <p>Gândit special pentru cei mici: cald, simplu, fără capcane.</p>
+    </div>
+    <div class="tgrid">
+      <div class="tcard reveal">
+        <span class="tic"><svg viewBox="0 0 24 24" fill="none" stroke="#7CB342" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span>
+        <h3>Fără cont, fără reclame</h3>
+        <p>Nici email, nici nume, nici reclame agresive. Desenele rămân la voi.</p>
+      </div>
+      <div class="tcard reveal d1">
+        <span class="tic"><svg viewBox="0 0 24 24" fill="none" stroke="#6BB6E8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 9h18"/><circle cx="8" cy="14" r="1.4" fill="#6BB6E8"/><path d="M12 14h5"/></svg></span>
+        <h3>Doar strict necesar</h3>
+        <p>Fără urmărire, fără cookie-uri de marketing. „Salvează" descarcă un PNG.</p>
+      </div>
+      <div class="tcard reveal d2">
+        <span class="tic"><svg viewBox="0 0 24 24" fill="none" stroke="#E63946" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg></span>
+        <h3>Făcut cu drag în România</h3>
+        <p>Limba română de la cap la coadă și o poveste folk în fiecare colț.</p>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:36px;" class="reveal">
+      <a class="btn btn-ghost" href="#">Cum funcționează Plaiu →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STORY BAND ============ -->
+<section class="story reveal">
+  <div class="story-in">
+    <p class="quote">„Pe-un picior de <span class="em">plai</span>,<br/>pe-o gură de rai."</p>
+    <p class="src">— Miorița</p>
+    <p class="lede"><em>Plaiu</em> e pajiștea înaltă, locul poveștilor bunicilor noștri. Am construit un plai digital cald și sigur, unde orice copil își poate aduce imaginația la viață. Pentru că orice copil merită un plai al lui.</p>
+    <svg class="hills-deco" viewBox="0 0 1600 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 C 300 10 560 30 880 22 C 1180 14 1400 36 1600 26 L1600 60 L0 60 Z" fill="#ffffff"/></svg>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="ctaband reveal">
+  <h2>Hai pe Plaiu să desenăm!</h2>
+  <p>Două atingeri și ești pe pagină. Fără cont, fără grabă.</p>
+  <a class="btn btn-sun" href="Plaiu Draw.html">Începe să desenezi</a>
+  <p class="mini">Gratis pentru totdeauna · pentru copii de 3–10 ani</p>
+</section>
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="foot-in">
+    <div class="foot-brand">
+      <a class="wordmark" href="#">Plaiu<span class="dot"></span></a>
+      <span class="foot-credit">Făcut cu <span class="heart">♥</span> în România</span>
+    </div>
+    <nav class="foot-links" aria-label="Legal">
+      <a href="#parinti">Pentru părinți</a>
+      <a href="#">Termeni</a>
+      <a href="#">Confidențialitate</a>
+    </nav>
+  </div>
+</footer>
+
+<div id="tweaks-root"></div>
+
+<!-- reveal on scroll -->
+<script>
+(function(){
+  document.body.classList.add('anim');
+  var els = [].slice.call(document.querySelectorAll('.reveal'));
+  function show(e){e.classList.add('in');}
+  if(!('IntersectionObserver' in window)){els.forEach(show);return;}
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){ if(en.isIntersecting){show(en.target);io.unobserve(en.target);} });
+  },{threshold:0.1, rootMargin:'0px 0px -8% 0px'});
+  els.forEach(function(e){io.observe(e);});
+  // safety: reveal anything already in view on first frame (covers hero on load)
+  requestAnimationFrame(function(){
+    var vh = window.innerHeight || 800;
+    els.forEach(function(e){ var r=e.getBoundingClientRect(); if(r.top < vh*0.95){ show(e); io.unobserve(e); } });
+  });
+})();
+</script>
+
+<!-- drawable hero -->
+<script>
+(function(){
+  var hero=document.querySelector('.hero');
+  var cv=document.getElementById('heroCanvas');
+  if(!hero||!cv) return;
+  var ctx=cv.getContext('2d');
+  var color='#E63946', drawing=false, lx=0, ly=0, hasStroke=false;
+
+  function fit(){
+    var w=hero.clientWidth,h=hero.clientHeight;
+    if(w<2||h<2){requestAnimationFrame(fit);return;}
+    var prev=(cv.width>0&&hasStroke)?cv.toDataURL():null;
+    var dpr=Math.min(window.devicePixelRatio||1,2);
+    cv.width=Math.floor(w*dpr);cv.height=Math.floor(h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.lineCap='round';ctx.lineJoin='round';
+    if(prev){var img=new Image();img.onload=function(){ctx.drawImage(img,0,0,w,h);};img.src=prev;}
+  }
+  fit();
+  var rt;
+  function refit(){clearTimeout(rt);rt=setTimeout(fit,150);}
+  window.addEventListener('resize',refit);
+  window.addEventListener('load',refit);
+  if(document.fonts&&document.fonts.ready){document.fonts.ready.then(refit);}
+  if(window.ResizeObserver){new ResizeObserver(refit).observe(hero);}
+
+  function pos(e){var r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+  function firstStroke(){
+    if(hasStroke)return;hasStroke=true;
+    var hint=document.getElementById('doodleHint');if(hint)hint.classList.add('gone');
+    document.getElementById('doodleContinue').classList.add('on');
+  }
+  cv.addEventListener('pointerdown',function(e){
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    e.preventDefault();
+    try{cv.setPointerCapture(e.pointerId);}catch(err){}
+    drawing=true;var p=pos(e);lx=p.x;ly=p.y;
+    ctx.globalCompositeOperation='source-over';
+    ctx.fillStyle=color;ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,Math.PI*2);ctx.fill();
+    firstStroke();
+  });
+  cv.addEventListener('pointermove',function(e){
+    if(!drawing)return;e.preventDefault();
+    var p=pos(e);
+    ctx.strokeStyle=color;ctx.lineWidth=7;
+    ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();
+    lx=p.x;ly=p.y;
+  });
+  ['pointerup','pointercancel'].forEach(function(ev){cv.addEventListener(ev,function(){drawing=false;});});
+
+  var ui=document.getElementById('doodleUi');
+  [].forEach.call(ui.querySelectorAll('.d'),function(b){
+    b.addEventListener('click',function(){
+      color=b.getAttribute('data-c');
+      [].forEach.call(ui.querySelectorAll('.d'),function(x){x.classList.remove('sel');});
+      b.classList.add('sel');
+    });
+  });
+  document.getElementById('doodleClear').addEventListener('click',function(){
+    ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);ctx.restore();
+  });
+
+  // "Ia desenul cu tine" — seed the draw app with the hero doodle
+  document.getElementById('doodleContinue').addEventListener('click',function(){
+    try{
+      var out=document.createElement('canvas');out.width=1200;out.height=900;
+      var c=out.getContext('2d');
+      var w=hero.clientWidth,h=hero.clientHeight;
+      var s=Math.min(out.width/w,out.height/h);
+      var dw=w*s,dh=h*s;
+      c.drawImage(cv,(out.width-dw)/2,(out.height-dh)/2,dw,dh);
+      localStorage.setItem('plaiu-doodle-seed',out.toDataURL());
+    }catch(err){}
+    location.href='Plaiu Draw.html';
+  });
+
+  document.getElementById('doodleToggle').addEventListener('click',function(){
+    hero.classList.toggle('draw-on');
+  });
+
+  // tiny demo squiggle so visitors notice the hero is drawable
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: no-preference)').matches&&matchMedia('(pointer:fine)').matches){
+    setTimeout(function(){
+      if(hasStroke||hero.clientWidth<900)return;
+      var w=hero.clientWidth,h=hero.clientHeight;
+      var x0=w*0.09,y0=h-128,len=130,i=1,N=44;
+      ctx.strokeStyle='#FFD93D';ctx.lineWidth=7;ctx.lineCap='round';
+      (function step(){
+        if(hasStroke||i>N)return;
+        var t0=(i-1)/N,t1=i/N;
+        ctx.beginPath();
+        ctx.moveTo(x0+t0*len,y0+Math.sin(t0*Math.PI*3)*13);
+        ctx.lineTo(x0+t1*len,y0+Math.sin(t1*Math.PI*3)*13);
+        ctx.stroke();i++;requestAnimationFrame(step);
+      })();
+    },1400);
+  }
+})();
+</script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+const PLAIU_TWEAKS = /*EDITMODE-BEGIN*/{
+  "folk": "echilibrat",
+  "bg": "cer",
+  "mascot": "fara",
+  "doodle": true
+}/*EDITMODE-END*/;
+
+const FOLK_MAP = {discret:"0", echilibrat:"1", folk:"2"};
+
+function PlaiuTweaks(){
+  const [t, setTweak] = useTweaks(PLAIU_TWEAKS);
+  React.useEffect(function(){
+    const r = document.documentElement;
+    r.setAttribute('data-folk', FOLK_MAP[t.folk] || "1");
+    r.setAttribute('data-bg', t.bg);
+    r.setAttribute('data-mascot', t.mascot);
+    r.setAttribute('data-doodle', t.doodle === false ? 'off' : 'on');
+    const copil = document.querySelector('.m-copil');
+    const pensula = document.querySelector('.m-pensula');
+    if(copil && pensula){
+      copil.style.display = (t.mascot === 'pensula') ? 'none' : 'block';
+      pensula.style.display = (t.mascot === 'pensula') ? 'block' : 'none';
+    }
+  }, [t.folk, t.bg, t.mascot, t.doodle]);
+
+  return (
+    <TweaksPanel>
+      <TweakSection label="Aspect plai" />
+      <TweakRadio label="Intensitate folk" value={t.folk}
+        options={['discret','echilibrat','folk']}
+        onChange={(v)=>setTweak('folk', v)} />
+      <TweakRadio label="Fundal" value={t.bg}
+        options={['crem','cer','pajiste']}
+        onChange={(v)=>setTweak('bg', v)} />
+      <TweakToggle label="Plai desenabil (hero)" value={t.doodle !== false}
+        onChange={(v)=>setTweak('doodle', v)} />
+      <TweakSection label="Mascotă (placeholder v1)" />
+      <TweakRadio label="Mascotă" value={t.mascot}
+        options={['copil','pensula','fara']}
+        onChange={(v)=>setTweak('mascot', v)} />
+    </TweaksPanel>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('tweaks-root')).render(<PlaiuTweaks/>);
+</script>
+</body>
+</html>
