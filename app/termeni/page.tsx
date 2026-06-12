@@ -1,22 +1,15 @@
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { PlaiuNav } from '@/components/plaiu/plaiu-nav'
+import { PlaiuFooter } from '@/components/plaiu/plaiu-footer'
 
 export default function TermeniPage() {
   return (
-    <main className="min-h-screen bg-background">
-      <header className="flex items-center gap-4 px-4 py-4 border-b border-border">
-        <Button variant="ghost" size="icon" asChild className="size-12 rounded-full">
-          <Link href="/" aria-label="Inapoi acasa">
-            <ArrowLeft className="size-6" />
-          </Link>
-        </Button>
-        <h1 className="font-display text-2xl font-bold text-foreground">
+    <div className="plaiu">
+      <PlaiuNav />
+      <main className="wrap" style={{ padding: '40px 22px 64px' }}>
+        <h1 className="font-display" style={{ fontSize: 32, marginBottom: 16 }}>
           Termeni si Conditii
         </h1>
-      </header>
-      
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         <section>
           <h2 className="font-display text-xl font-semibold text-foreground mb-3">
             1. Acceptarea Termenilor
@@ -71,7 +64,9 @@ export default function TermeniPage() {
         <p className="text-sm text-muted-foreground pt-4 border-t border-border">
           Ultima actualizare: Ianuarie 2026
         </p>
-      </div>
-    </main>
+        </div>
+      </main>
+      <PlaiuFooter />
+    </div>
   )
 }
