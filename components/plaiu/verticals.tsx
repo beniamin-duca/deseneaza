@@ -17,12 +17,14 @@ export function Verticals() {
         </Reveal>
         <div className="vgrid">
           {V.map((v) => (
-            <a className={`vcard ${v.cls} reveal${v.delay ? ` d${v.delay}` : ''}`} href="#" key={v.title} aria-disabled="true">
+            // Not yet linked — render as a non-interactive card (no href) so
+            // "în curând" teasers don't scroll-jump on tap.
+            <div className={`vcard ${v.cls} reveal${v.delay ? ` d${v.delay}` : ''}`} key={v.title} aria-disabled="true">
               <span className="vic">{v.ic}</span>
               <span className="vbadge">în curând</span>
               <h3>{v.title}</h3>
               <p>{v.text}</p>
-            </a>
+            </div>
           ))}
         </div>
       </div>

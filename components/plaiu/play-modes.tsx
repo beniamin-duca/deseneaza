@@ -4,8 +4,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Reveal } from './reveal'
 
-const COLORAT_TEMPLATES = ['bunny','cat','dog','dinosaur','flower','lion','plane','rocket','sun','tree','unicorn','car']
-
 const ARROW = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`
 
 const IC = {
@@ -17,13 +15,11 @@ const IC = {
 
 export function PlayModes() {
   const router = useRouter()
+  // The draw app reads only `mode` (it restores the colorat template from
+  // localStorage), so Surpriză randomizes the mode — a real surprise without
+  // touching the frozen app.
   const surprise = () => {
-    const blank = Math.random() < 0.5
-    if (blank) router.push('/desen?mode=blank')
-    else {
-      const t = COLORAT_TEMPLATES[Math.floor(Math.random() * COLORAT_TEMPLATES.length)]
-      router.push(`/desen?mode=colorat&template=${t}`)
-    }
+    router.push(Math.random() < 0.5 ? '/desen?mode=blank' : '/desen?mode=colorat')
   }
   return (
     <section className="sec" id="moduri">
