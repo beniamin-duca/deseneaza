@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Fredoka, Quicksand, Baloo_2, Nunito } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 const fredoka = Fredoka({
@@ -58,6 +59,7 @@ export default function RootLayout({
     <html lang="ro" className={`${fredoka.variable} ${quicksand.variable} ${baloo.variable} ${nunito.variable} bg-background`}>
       <body className="font-sans antialiased min-h-screen">
         {children}
+        <Analytics />
       </body>
     </html>
   )
